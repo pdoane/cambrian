@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cambrian - Evolution Simulation</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header>
+      <h1>CAMBRIAN</h1>
+      <span class="subtitle">Evolution Simulation</span>
+    </header>
+
+    <!-- Main simulation canvas -->
+    <div class="canvas-container">
+      <canvas id="world-canvas"></canvas>
+    </div>
+
+    <!-- Sidebar: controls + settings -->
+    <div class="sidebar">
+      <!-- Controls -->
+      <div class="controls">
+        <h2>Controls</h2>
+        <div class="control-row">
+          <button id="btn-play-pause">Play</button>
+          <button id="btn-reset">Reset</button>
+        </div>
+        <div class="speed-control">
+          <label id="speed-label">Speed: 1x</label>
+          <input type="range" id="slider-speed" min="1" max="10" value="1">
+        </div>
+      </div>
+
+      <!-- Settings (sliders for tuning simulation parameters) -->
+      <div class="settings">
+        <h2>Settings</h2>
+        <div id="settings-panel"></div>
+      </div>
+    </div>
+
+    <!-- Bottom panel: charts -->
+    <div class="bottom-panel">
+      <div class="chart-item">
+        <canvas id="chart-population" width="300" height="80"></canvas>
+      </div>
+      <div class="chart-item">
+        <canvas id="chart-speed" width="300" height="80"></canvas>
+      </div>
+      <div class="chart-item">
+        <canvas id="chart-size" width="300" height="80"></canvas>
+      </div>
+      <div class="chart-item">
+        <canvas id="chart-senseRange" width="300" height="80"></canvas>
+      </div>
+      <div class="chart-item">
+        <canvas id="chart-efficiency" width="300" height="80"></canvas>
+      </div>
+      <div class="chart-item">
+        <canvas id="chart-hue" width="300" height="80"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+/* style.css -- Dark theme layout for Cambrian */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0d0d1a;
+  color: #e0e0e0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---- Layout ----
+   3-row grid:
+     row 1: header (auto height)
+     row 2: canvas + sidebar (fills remaining space)
+     row 3: bottom chart panel (fixed height)
+*/
+
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 1fr 280px;
+  height: 100vh;
+}
+
+header {
+  grid-column: 1 / -1;
+  background: #16163a;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #2a2a5a;
+}
+
+header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #7ecfff;
+}
+
+header .subtitle {
+  font-size: 13px;
+  color: #8888aa;
+}
+
+/* ---- Canvas area ---- */
+
+.canvas-container {
+  position: relative;
+  background: #1a1a2e;
+  overflow: hidden;
+}
+
+#world-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Sidebar ---- */
+
+.sidebar {
+  background: #12122a;
+  border-left: 1px solid #2a2a5a;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+
+/* ---- Controls ---- */
+
+.controls {
+  padding: 16px;
+  border-bottom: 1px solid #2a2a5a;
+}
+
+.controls h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #8888aa;
+  margin-bottom: 12px;
+}
+
+.control-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.control-row button {
+  flex: 1;
+  padding: 8px 0;
+  border: 1px solid #3a3a6a;
+  background: #1e1e44;
+  color: #c0c0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.control-row button:hover {
+  background: #2a2a5a;
+}
+
+.speed-control {
+  margin-top: 4px;
+}
+
+.speed-control label {
+  font-size: 12px;
+  color: #8888aa;
+}
+
+.speed-control input[type="range"] {
+  width: 100%;
+  margin-top: 4px;
+  accent-color: #7ecfff;
+}
+
+/* ---- Settings ---- */
+
+.settings {
+  padding: 16px;
+  border-bottom: 1px solid #2a2a5a;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.settings h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #8888aa;
+  margin-bottom: 12px;
+}
+
+.settings-group {
+  margin-bottom: 8px;
+}
+
+.settings-group-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #aaaacc;
+  cursor: pointer;
+  padding: 4px 0;
+  user-select: none;
+}
+
+.settings-group-header::before {
+  content: "\25BE ";
+  font-size: 10px;
+}
+
+.settings-group-header.collapsed::before {
+  content: "\25B8 ";
+}
+
+.settings-group-body {
+  padding-left: 4px;
+}
+
+.settings-group-body.collapsed {
+  display: none;
+}
+
+.setting-row {
+  margin-bottom: 6px;
+}
+
+.setting-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.setting-label {
+  font-size: 11px;
+  color: #9999bb;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.setting-value {
+  font-size: 11px;
+  color: #ccccee;
+  font-family: monospace;
+}
+
+.setting-slider {
+  width: 100%;
+  margin-top: 2px;
+  accent-color: #7ecfff;
+}
+
+/* Tooltip icon */
+.setting-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #2a2a5a;
+  color: #7ecfff;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: help;
+  position: relative;
+  flex-shrink: 0;
+}
+
+
+/* Tooltip (positioned via JS to escape overflow containers) */
+
+.tooltip {
+  position: fixed;
+  width: 220px;
+  padding: 8px 10px;
+  background: #222244;
+  color: #ccccee;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+  border-radius: 6px;
+  border: 1px solid #3a3a6a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  pointer-events: none;
+  display: none;
+  white-space: normal;
+}
+
+.tooltip.visible {
+  display: block;
+}
+
+/* ---- Bottom panel (charts) ---- */
+
+.bottom-panel {
+  grid-column: 1 / -1;
+  background: #0e0e22;
+  border-top: 1px solid #2a2a5a;
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  overflow-x: auto;
+  height: 100px;
+}
+
+.bottom-panel .chart-item {
+  flex: 1;
+  min-width: 140px;
+}
+
+.bottom-panel .chart-item canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  display: block;
+}
