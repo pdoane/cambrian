@@ -27,7 +27,7 @@ function start() {
   const stats = new Stats();
   const charts = new Charts(stats);
 
-  // Reset callback restarts everything
+  // Restart callback re-initializes the simulation
   const ui = new UI(simulation, () => start());
 
   simulation.running = true;

@@ -19,14 +19,14 @@
       <canvas id="world-canvas"></canvas>
     </div>
 
-    <!-- Sidebar: controls + settings -->
+    <!-- Sidebar: controls + tabbed settings -->
     <div class="sidebar">
-      <!-- Controls -->
+      <!-- Controls (always visible) -->
       <div class="controls">
         <h2>Controls</h2>
         <div class="control-row">
           <button id="btn-play-pause">Play</button>
-          <button id="btn-reset">Reset</button>
+          <button id="btn-restart">Restart</button>
         </div>
         <div class="speed-control">
           <label id="speed-label">Speed: 1x</label>
@@ -34,10 +34,15 @@
         </div>
       </div>
 
-      <!-- Settings (sliders for tuning simulation parameters) -->
-      <div class="settings">
-        <h2>Settings</h2>
-        <div id="settings-panel"></div>
+      <!-- Tabbed settings area -->
+      <div class="tab-bar">
+        <button class="tab active" data-tab="tab-settings">Settings</button>
+        <button class="tab" data-tab="tab-dna">DNA</button>
+        <button id="btn-reset" title="Reset all to defaults">Reset</button>
+      </div>
+      <div class="tab-content">
+        <div id="tab-settings" class="tab-pane active"></div>
+        <div id="tab-dna" class="tab-pane"></div>
       </div>
     </div>
 

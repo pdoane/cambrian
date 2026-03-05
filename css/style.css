@@ -127,22 +127,75 @@ header .subtitle {
   accent-color: #7ecfff;
 }
 
-/* ---- Settings ---- */
+/* ---- Tabs ---- */
 
-.settings {
-  padding: 16px;
+.tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
   border-bottom: 1px solid #2a2a5a;
+  background: #12122a;
+  padding: 0 8px;
+}
+
+.tab-bar .tab {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  color: #666688;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-bar .tab:hover {
+  color: #aaaacc;
+}
+
+.tab-bar .tab.active {
+  color: #7ecfff;
+  border-bottom-color: #7ecfff;
+}
+
+.tab-bar #btn-reset {
+  font-size: 10px;
+  padding: 3px 8px;
+  border: 1px solid #3a3a6a;
+  background: #1e1e44;
+  color: #9999bb;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.tab-bar #btn-reset:hover {
+  background: #2a2a5a;
+  color: #c0c0e0;
+}
+
+.tab-content {
   flex: 1;
   overflow-y: auto;
 }
 
-.settings h2 {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #8888aa;
-  margin-bottom: 12px;
+.tab-pane {
+  display: none;
+  padding: 12px 16px;
 }
+
+.tab-pane.active {
+  display: block;
+}
+
+/* ---- Settings ---- */
 
 .settings-group {
   margin-bottom: 8px;
@@ -202,6 +255,59 @@ header .subtitle {
   width: 100%;
   margin-top: 2px;
   accent-color: #7ecfff;
+}
+
+/* ---- DNA cards (compact gene layout) ---- */
+
+.dna-card {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1e1e3a;
+}
+
+.dna-card:last-child {
+  border-bottom: none;
+}
+
+.dna-card-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.dna-card-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #aaaacc;
+}
+
+.dna-card .setting-row.compact {
+  margin-bottom: 4px;
+}
+
+.dna-mut-row {
+  display: flex;
+  gap: 8px;
+}
+
+.dna-mini-slider {
+  flex: 1;
+  min-width: 0;
+}
+
+.dna-mini-slider .setting-label {
+  font-size: 10px;
+}
+
+.dna-mini-slider .setting-value {
+  font-size: 10px;
+}
+
+.setting-tip.small {
+  width: 12px;
+  height: 12px;
+  font-size: 8px;
 }
 
 /* Tooltip icon */

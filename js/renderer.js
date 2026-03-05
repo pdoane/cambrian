@@ -21,6 +21,11 @@ export class Renderer {
     ctx.fillStyle = "#1a1a2e";
     ctx.fillRect(0, 0, w, h);
 
+    // World boundary walls
+    ctx.strokeStyle = "rgba(126, 207, 255, 0.3)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, world.width - 2, world.height - 2);
+
     // Draw food as small green dots
     ctx.fillStyle = "#44cc44";
     for (const f of world.food) {

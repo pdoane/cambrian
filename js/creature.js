@@ -49,16 +49,27 @@ export class Creature {
     }
   }
 
-  /** Move forward in the current heading direction. Wraps around world edges. */
+  /** Move forward in the current heading direction. Bounces off walls. */
   move(worldWidth, worldHeight) {
     this.x += Math.cos(this.heading) * this.speed;
     this.y += Math.sin(this.heading) * this.speed;
 
-    // Toroidal world: go off one edge, appear on the other
-    if (this.x < 0) this.x += worldWidth;
-    if (this.x > worldWidth) this.x -= worldWidth;
-    if (this.y < 0) this.y += worldHeight;
-    if (this.y > worldHeight) this.y -= worldHeight;
+    // Bounce off walls: clamp position and reflect heading
+    if (this.x < this.size) {
+      this.x = this.size;
+      this.heading = Math.PI - this.heading;
+    } else if (this.x > worldWidth - this.size) {
+      this.x = worldWidth - this.size;
+      this.heading = Math.PI - this.heading;
+    }
+
+    if (this.y < this.size) {
+      this.y = this.size;
+      this.heading = -this.heading;
+    } else if (this.y > worldHeight - this.size) {
+      this.y = worldHeight - this.size;
+      this.heading = -this.heading;
+    }
   }
 
   /** Spend energy each tick. Bigger and faster creatures burn more energy. */

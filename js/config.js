@@ -33,13 +33,29 @@ export const SIM = {
   maxTicksPerFrame: 20,
 };
 
+// Snapshot of default values so "Reset" can restore them.
+export const DEFAULTS = {
+  WORLD: { ...WORLD },
+  ENERGY: { ...ENERGY },
+  GENE_DEFS: GENE_DEFS.map(g => ({ ...g })),
+};
+
+// Per-gene tips for the DNA settings panel.
+const GENE_TIPS = {
+  speed:      "Movement speed in pixels per tick.",
+  size:       "Body radius in pixels. Affects eating range and movement cost.",
+  senseRange: "How far a creature can detect food.",
+  efficiency: "Fraction of food energy absorbed when eating.",
+  hue:        "Color hue. A neutral trait that drifts via genetic drift.",
+};
+
 // Settings metadata: defines UI slider ranges and tooltips for each tunable parameter.
 // This drives the settings panel -- add an entry here and a slider appears automatically.
 export const SETTINGS_META = {
   world: {
     label: "World",
     params: [
-      { key: "foodCount",         label: "Initial Food",     min: 10,   max: 500,  step: 10,  obj: WORLD,
+      { key: "foodCount",         label: "Target Food",      min: 10,   max: 500,  step: 10,  obj: WORLD,
         tip: "Target number of food items in the world. Food regenerates toward this level." },
       { key: "foodEnergy",        label: "Food Energy",      min: 5,    max: 100,  step: 5,   obj: WORLD,
         tip: "Energy a creature gains from eating one food item (before efficiency multiplier)." },
@@ -65,3 +81,21 @@ export const SETTINGS_META = {
     ],
   },
 };
+
+// DNA gene definitions for the compact DNA tab.
+// Each entry produces a gene card: starting value slider + mutation rate/step side by side.
+export const DNA_GENES = GENE_DEFS.map(gene => {
+  const baseTip = GENE_TIPS[gene.name] || "";
+  const fracStep = gene.max <= 1 ? 0.01 : (gene.max <= 10 ? 0.1 : 1);
+  return {
+    gene,
+    label: gene.name,
+    tip: baseTip,
+    startingValue: { key: "default", label: "Start", min: gene.min, max: gene.max, step: fracStep, obj: gene,
+      tip: `${baseTip} Starting value for new creatures spawned on restart.` },
+    mutRate: { key: "mutRate", label: "Rate", min: 0, max: 1.0, step: 0.05, obj: gene,
+      tip: "Chance this gene mutates per reproduction. 0 = never, 1 = always." },
+    mutStep: { key: "mutStep", label: "Step", min: 0, max: gene.max - gene.min, step: fracStep, obj: gene,
+      tip: "Max change per mutation. Larger = more dramatic mutations." },
+  };
+});
