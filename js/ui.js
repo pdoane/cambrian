@@ -1,13 +1,12 @@
 // ui.js -- Wires up HTML controls to the simulation.
-// Includes play/pause, speed, restart, reset defaults, and tabbed settings.
+// Includes play/pause, speed, restart, and tabbed settings.
+// Each slider has a per-setting reset button that appears when modified.
 // The settings panel is built once and survives restarts.
 
-import { SETTINGS_META, DNA_GENES, DEFAULTS, SIM, WORLD, ENERGY, GENE_DEFS } from "./config.js";
+import { SETTINGS_META, DNA_GENES, SIM } from "./config.js";
 import { showTooltip, hideTooltip, setupChartTooltips } from "./tooltip.js";
 
 let settingsBuilt = false;
-// Track slider/value elements so Reset can update them
-const settingElements = [];
 
 export class UI {
   constructor(simulation, onRestart) {
@@ -26,7 +25,6 @@ export class UI {
   setupControls() {
     replaceWithClone("btn-play-pause");
     replaceWithClone("btn-restart");
-    replaceWithClone("btn-reset");
     replaceWithClone("slider-speed");
 
     const btnPlayPause = document.getElementById("btn-play-pause");
@@ -37,10 +35,6 @@ export class UI {
 
     document.getElementById("btn-restart").addEventListener("click", () => {
       this.onRestart();
-    });
-
-    document.getElementById("btn-reset").addEventListener("click", () => {
-      restoreDefaults();
     });
 
     const speedSlider = document.getElementById("slider-speed");
@@ -72,19 +66,6 @@ function setupTabs() {
       document.getElementById(tab.dataset.tab).classList.add("active");
     });
   });
-}
-
-function restoreDefaults() {
-  Object.assign(WORLD, DEFAULTS.WORLD);
-  Object.assign(ENERGY, DEFAULTS.ENERGY);
-  for (let i = 0; i < GENE_DEFS.length; i++) {
-    Object.assign(GENE_DEFS[i], DEFAULTS.GENE_DEFS[i]);
-  }
-  for (const { param, slider, valueSpan } of settingElements) {
-    const val = param.obj[param.key];
-    slider.value = val;
-    valueSpan.textContent = formatValue(val, param.step);
-  }
 }
 
 /** Build the Settings tab (World + Energy groups). */
@@ -124,7 +105,6 @@ function buildDnaTab() {
     const card = document.createElement("div");
     card.className = "dna-card";
 
-    // Gene name header with tooltip
     const header = document.createElement("div");
     header.className = "dna-card-header";
     const nameSpan = document.createElement("span");
@@ -142,11 +122,8 @@ function buildDnaTab() {
     }
 
     card.appendChild(header);
-
-    // Starting value: full-width slider
     card.appendChild(buildSliderRow(entry.startingValue, true));
 
-    // Mutation rate + step: side by side
     const mutRow = document.createElement("div");
     mutRow.className = "dna-mut-row";
     mutRow.appendChild(buildMiniSlider(entry.mutRate));
@@ -157,10 +134,41 @@ function buildDnaTab() {
   }
 }
 
+/**
+ * Create a small reset button for a slider.
+ * It's hidden when the value matches the default, shown when it differs.
+ */
+function createResetBtn(param, defaultVal, slider, valueSpan) {
+  const btn = document.createElement("button");
+  btn.className = "setting-reset";
+  btn.textContent = "\u21A9"; // ↩ arrow
+  btn.title = `Reset to ${formatValue(defaultVal, param.step)}`;
+
+  function updateVisibility() {
+    const current = parseFloat(slider.value);
+    // Use a small epsilon for floating point comparison
+    btn.classList.toggle("visible", Math.abs(current - defaultVal) > param.step * 0.01);
+  }
+
+  btn.addEventListener("click", () => {
+    param.obj[param.key] = defaultVal;
+    slider.value = defaultVal;
+    valueSpan.textContent = formatValue(defaultVal, param.step);
+    updateVisibility();
+  });
+
+  slider.addEventListener("input", updateVisibility);
+  updateVisibility();
+
+  return btn;
+}
+
 /** Build a standard full-width slider row. */
 function buildSliderRow(param, compact = false) {
   const row = document.createElement("div");
   row.className = compact ? "setting-row compact" : "setting-row";
+
+  const defaultVal = param.obj[param.key];
 
   const label = document.createElement("label");
   label.className = "setting-label";
@@ -193,11 +201,12 @@ function buildSliderRow(param, compact = false) {
     valueSpan.textContent = formatValue(val, param.step);
   });
 
-  settingElements.push({ param, slider, valueSpan });
+  const resetBtn = createResetBtn(param, defaultVal, slider, valueSpan);
 
   const labelRow = document.createElement("div");
   labelRow.className = "setting-label-row";
   labelRow.appendChild(label);
+  labelRow.appendChild(resetBtn);
   labelRow.appendChild(valueSpan);
 
   row.appendChild(labelRow);
@@ -209,6 +218,8 @@ function buildSliderRow(param, compact = false) {
 function buildMiniSlider(param) {
   const wrapper = document.createElement("div");
   wrapper.className = "dna-mini-slider";
+
+  const defaultVal = param.obj[param.key];
 
   const labelRow = document.createElement("div");
   labelRow.className = "setting-label-row";
@@ -244,9 +255,10 @@ function buildMiniSlider(param) {
     valueSpan.textContent = formatValue(val, param.step);
   });
 
-  settingElements.push({ param, slider, valueSpan });
+  const resetBtn = createResetBtn(param, defaultVal, slider, valueSpan);
 
   labelRow.appendChild(label);
+  labelRow.appendChild(resetBtn);
   labelRow.appendChild(valueSpan);
   wrapper.appendChild(labelRow);
   wrapper.appendChild(slider);

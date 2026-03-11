@@ -162,24 +162,6 @@ header .subtitle {
   border-bottom-color: #7ecfff;
 }
 
-.tab-bar #btn-reset {
-  font-size: 10px;
-  padding: 3px 8px;
-  border: 1px solid #3a3a6a;
-  background: #1e1e44;
-  color: #9999bb;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: background 0.15s;
-  white-space: nowrap;
-  margin-left: 4px;
-  flex-shrink: 0;
-}
-
-.tab-bar #btn-reset:hover {
-  background: #2a2a5a;
-  color: #c0c0e0;
-}
 
 .tab-content {
   flex: 1;
@@ -255,6 +237,29 @@ header .subtitle {
   width: 100%;
   margin-top: 2px;
   accent-color: #7ecfff;
+}
+
+/* Per-slider reset button: hidden by default, appears when value != default */
+.setting-reset {
+  border: none;
+  background: transparent;
+  color: #555577;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.setting-reset.visible {
+  visibility: visible;
+  opacity: 1;
+}
+
+.setting-reset:hover {
+  color: #7ecfff;
 }
 
 /* ---- DNA cards (compact gene layout) ---- */

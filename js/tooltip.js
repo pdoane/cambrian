@@ -2,12 +2,12 @@
 // Uses a single fixed-position element (#tooltip) to escape all overflow containers.
 
 const CHART_TIPS = {
-  "chart-population": "Total number of living creatures over time. Watch for booms, crashes, and stable equilibria.",
-  "chart-speed": "Average movement speed. Faster creatures find food quicker but burn more energy (cost scales with speed\u00B2).",
-  "chart-size": "Average body size. Bigger creatures can reach food easier but have higher movement costs.",
-  "chart-senseRange": "Average sensing range. Creatures with longer range detect food from farther away.",
-  "chart-efficiency": "Average metabolic efficiency. Higher efficiency means more energy extracted from each food item.",
-  "chart-hue": "Average color hue. This is a neutral trait \u2014 it doesn't affect survival, so it drifts randomly (genetic drift!).",
+  "chart-population": "Total living creatures over time. A stable line means births match deaths. Booms happen when food is plentiful; crashes when overpopulation exhausts food. A healthy ecosystem oscillates gently.",
+  "chart-speed": "Average movement speed over time. Speed helps find food but costs energy (speed\u00B2 \u00D7 size). If food is scarce, slower creatures may survive longer. If food is abundant, fast ones dominate.",
+  "chart-size": "Average body size over time. Bigger creatures eat from farther away but burn more energy moving. Watch whether evolution favors large or small \u2014 it depends on food density.",
+  "chart-senseRange": "Average sensing range over time. Longer range = better food detection. Since it has no energy cost, this tends to increase unless mutation pushes it back down.",
+  "chart-efficiency": "Average efficiency over time. Since higher efficiency is always better (more energy per meal, no downside), expect this to climb steadily toward the maximum.",
+  "chart-hue": "Average hue over time. Color has no survival effect, so this line wanders randomly \u2014 a textbook example of genetic drift. The smaller the population, the more it wobbles.",
 };
 
 export { CHART_TIPS };

@@ -42,11 +42,11 @@ export const DEFAULTS = {
 
 // Per-gene tips for the DNA settings panel.
 const GENE_TIPS = {
-  speed:      "Movement speed in pixels per tick.",
-  size:       "Body radius in pixels. Affects eating range and movement cost.",
-  senseRange: "How far a creature can detect food.",
-  efficiency: "Fraction of food energy absorbed when eating.",
-  hue:        "Color hue. A neutral trait that drifts via genetic drift.",
+  speed:      "How fast a creature moves. Faster creatures find food quicker, but movement cost scales with speed\u00B2 \u00D7 size \u2014 so doubling speed quadruples the energy burn. Evolution balances speed against survival.",
+  size:       "Body radius. Bigger creatures can eat food from farther away (eating range = size), but they burn more energy moving because movement cost scales with size. Small and fast vs. big and slow is a key trade-off.",
+  senseRange: "How far a creature can detect food. Longer range means better food-finding, but it has no direct energy cost \u2014 so evolution tends to push this higher over time unless mutation keeps it varied.",
+  efficiency: "How much energy a creature extracts from food (0\u20131). At 0.5, a creature gets half the food\u2019s energy. Higher efficiency means fewer meals needed to reproduce. This is a pure advantage with no downside, so watch it climb!",
+  hue:        "Body color (hue on the color wheel). This gene has zero effect on survival \u2014 it\u2019s a neutral trait. Watch it drift randomly over generations. This is genetic drift: random changes in traits that don\u2019t affect fitness.",
 };
 
 // Settings metadata: defines UI slider ranges and tooltips for each tunable parameter.

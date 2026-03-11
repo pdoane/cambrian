@@ -28,10 +28,11 @@ export class World {
     }
   }
 
-  /** Add one food item at a random position. */
+  /** Add one food item at a random position, inset from walls. */
   spawnFood() {
-    const x = Math.random() * this.width;
-    const y = Math.random() * this.height;
+    const margin = 20;
+    const x = margin + Math.random() * (this.width - margin * 2);
+    const y = margin + Math.random() * (this.height - margin * 2);
     this.food.push(new Food(x, y, WORLD.foodEnergy));
   }
 
