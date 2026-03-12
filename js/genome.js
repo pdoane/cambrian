@@ -1,6 +1,6 @@
 // genome.js -- The DNA system.
 // Each creature has a Genome containing values for every gene defined in config.js.
-// When a creature reproduces, each gene has a chance to mutate slightly.
+// When creatures mate, crossover picks each gene from one parent, then mutates.
 
 import { GENE_DEFS } from "./config.js";
 import { clamp } from "./utils.js";
@@ -27,17 +27,19 @@ export class Genome {
   }
 
   /**
-   * Create a child genome with possible mutations.
-   * Each gene independently rolls for mutation.
-   * Mutations nudge the value by a small random amount.
+   * Create a child genome via sexual crossover of two parents.
+   * For each gene: pick randomly from parent A or B, then apply mutation.
    */
-  reproduce() {
+  static crossover(genomeA, genomeB) {
     const childGenes = {};
     for (const def of GENE_DEFS) {
-      let value = this.genes[def.name];
+      // Pick from one parent randomly
+      let value = Math.random() < 0.5
+        ? genomeA.genes[def.name]
+        : genomeB.genes[def.name];
 
+      // Mutate
       if (Math.random() < def.mutRate) {
-        // Nudge up or down by a random amount within mutStep
         const delta = (Math.random() * 2 - 1) * def.mutStep;
         value = clamp(value + delta, def.min, def.max);
       }
