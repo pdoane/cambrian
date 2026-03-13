@@ -83,6 +83,12 @@
   </div>
 
   <div class="tooltip" id="tooltip"></div>
+  <script>
+    // Register service worker for cache busting on GitHub Pages
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js");
+    }
+  </script>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
