@@ -498,96 +498,42 @@ function openSpeciesEditorModal(design) {
       return input;
     });
 
-    // DNA section — starting value, mutation rate, mutation step per gene
-    const dnaHeader = document.createElement("div");
-    dnaHeader.className = "modal-sub-header";
-    dnaHeader.textContent = "DNA";
-    content.appendChild(dnaHeader);
-
+    // DNA section — genes grouped by category
+    const categories = [];
+    const catMap = new Map();
     for (const def of GENE_DEFS) {
-      const fracStep = def.max <= 1 ? 0.01 : (def.max <= 10 ? 0.1 : 1);
-
-      // Gene card
-      const card = document.createElement("div");
-      card.className = "dna-card";
-
-      // Gene name + tip
-      const cardHeader = document.createElement("div");
-      cardHeader.className = "dna-card-header";
-      const nameSpan = document.createElement("span");
-      nameSpan.className = "dna-card-name";
-      nameSpan.textContent = def.name;
-      cardHeader.appendChild(nameSpan);
-      if (GENE_TIPS[def.name]) {
-        const tip = document.createElement("span");
-        tip.className = "setting-tip";
-        tip.textContent = "?";
-        tip.addEventListener("mouseenter", (e) => showTooltip(e.target, GENE_TIPS[def.name], "left"));
-        tip.addEventListener("mouseleave", hideTooltip);
-        cardHeader.appendChild(tip);
+      const cat = def.category || "other";
+      if (!catMap.has(cat)) {
+        catMap.set(cat, []);
+        categories.push(cat);
       }
-      card.appendChild(cardHeader);
-
-      // Starting value slider
-      card.appendChild(buildSliderRow({
-        key: def.name, label: "Start",
-        min: def.min, max: def.max, step: fracStep,
-        obj: design.genes,
-      }, true));
-
-      // Mutation rate + step in a row
-      const mutRow = document.createElement("div");
-      mutRow.className = "dna-mut-row";
-
-      mutRow.appendChild(buildMiniSlider({
-        key: def.name, label: "Mut Rate",
-        min: 0, max: 1.0, step: 0.05,
-        obj: design.mutRates,
-        tip: "Chance this gene mutates per reproduction (0=never, 1=always).",
-      }));
-
-      mutRow.appendChild(buildMiniSlider({
-        key: def.name, label: "Mut Step",
-        min: 0, max: def.max - def.min, step: fracStep,
-        obj: design.mutSteps,
-        tip: "Max change per mutation. Larger = more dramatic mutations.",
-      }));
-
-      card.appendChild(mutRow);
-      content.appendChild(card);
+      catMap.get(cat).push(def);
     }
 
-    // Energy & Metabolism section
-    const energyHeader = document.createElement("div");
-    energyHeader.className = "modal-sub-header";
-    energyHeader.textContent = "Energy & Metabolism";
-    content.appendChild(energyHeader);
+    const CATEGORY_LABELS = {
+      body: "Body & Senses",
+      metabolism: "Metabolism",
+      reproduction: "Reproduction",
+      mutation: "Mutation",
+    };
 
-    const energyParams = [
-      { key: "initial",                label: "Initial Energy",     min: 20,    max: 500,  step: 10,  obj: design.cfg,
-        tip: "Energy each creature starts with." },
-      { key: "maxEnergy",              label: "Max Energy",         min: 100,   max: 1000, step: 50,  obj: design.cfg,
-        tip: "Maximum energy a creature can store." },
-      { key: "maxHealth",              label: "Max Health",         min: 50,    max: 500,  step: 10,  obj: design.cfg,
-        tip: "Maximum health. Drains when out of food or water." },
-      { key: "moveCostBase",           label: "Move Cost",          min: 0.01,  max: 0.5,  step: 0.01, obj: design.cfg,
-        tip: "Energy cost per tick for movement (x speed\u00B2 x size)." },
-      { key: "idleCost",               label: "Idle Cost",          min: 0.005, max: 0.2,  step: 0.005, obj: design.cfg,
-        tip: "Base energy cost per tick just for being alive." },
-      { key: "matingDuration",         label: "Mating Duration",    min: 60,    max: 600,  step: 30,  obj: design.cfg,
-        tip: "Ticks the pair spends mating." },
-      { key: "hungerThreshold",        label: "Hunger Seek %",      min: 0.1,   max: 1.0,  step: 0.05, obj: design.cfg,
-        tip: "Seek food when energy drops below this fraction of max." },
-      { key: "thirstThreshold",        label: "Thirst Seek %",      min: 0.1,   max: 1.0,  step: 0.05, obj: design.cfg,
-        tip: "Seek water when hydration drops below this fraction." },
-      { key: "eatingDuration",         label: "Eating Duration",    min: 10,    max: 120,  step: 5,   obj: design.cfg,
-        tip: "Ticks it takes to eat a berry." },
-      { key: "maturityAge",            label: "Maturity Age",       min: 100,   max: 2000, step: 50,  obj: design.cfg,
-        tip: "Ticks after growth completes before creature can mate." },
-    ];
+    for (const cat of categories) {
+      const header = document.createElement("div");
+      header.className = "modal-sub-header";
+      header.textContent = CATEGORY_LABELS[cat] || cat;
+      content.appendChild(header);
 
-    for (const param of energyParams) {
-      content.appendChild(buildSliderRow(param));
+      for (const def of catMap.get(cat)) {
+        const fracStep = def.max <= 1 ? 0.01 : (def.max <= 10 ? 0.1 : 1);
+        const tip = GENE_TIPS[def.name] || def.tip || null;
+
+        content.appendChild(buildSliderRow({
+          key: def.name, label: def.name,
+          min: def.min, max: def.max, step: fracStep,
+          obj: design.genes,
+          tip,
+        }));
+      }
     }
 
     // Buttons
@@ -720,16 +666,25 @@ function openEcosystemModal(eco, isExisting) {
 // ─── Gene tooltips ─────────────────────────────────────────────────────────
 
 const GENE_TIPS = {
-  speed:      "Movement speed. Faster = finds food quicker, but cost scales with speed\u00B2 \u00D7 size.",
-  size:       "Body radius. Bigger = wider eating range, but higher movement cost.",
-  eyesight:   "Detection range for food, water, and mates.",
-  efficiency: "Energy extracted per meal (0\u20131). Pure advantage \u2014 expect it to climb.",
-  hue:        "Body color on the color wheel. Determines species via hue threshold.",
-  charisma:   "Mating success chance. Both partners' values multiply.",
+  speed:        "Movement speed. Faster = finds food quicker, but cost scales with speed\u00B2 \u00D7 size.",
+  size:         "Body radius. Bigger = wider eating range, but higher movement cost.",
+  eyesight:     "Detection range for food, water, and mates.",
+  attack:       "Damage per tick when attacking prey. > 0.3 makes this a predator.",
+  defense:      "Reduces incoming attack damage.",
+  efficiency:   "Energy extracted per meal (0\u20131). Pure advantage \u2014 expect it to climb.",
+  maxEnergy:    "Maximum energy a creature can store.",
+  maxHealth:    "Maximum health. Drains when out of food or water.",
+  moveCostBase: "Energy cost per tick for movement (x speed\u00B2 x size).",
+  idleCost:     "Base energy cost per tick just for being alive.",
+  hungerThreshold: "Seek food when energy drops below this fraction of max.",
+  thirstThreshold: "Seek water when hydration drops below this fraction.",
+  hue:          "Body color on the color wheel. Determines species via hue threshold.",
+  charisma:     "Mating success chance. Both partners' values multiply.",
   reproductiveCapability: "Average babies per mating.",
   pregnancyTime: "Pregnancy duration (ticks). Longer = stronger babies but higher cost.",
-  attack:     "Damage per tick when attacking prey. > 0.3 makes this a predator.",
-  defense:    "Reduces incoming attack damage.",
+  matingDuration: "Ticks the pair spends mating.",
+  eatingDuration: "Ticks it takes to eat a berry.",
+  maturityAge:  "Ticks after growth completes before creature can mate.",
 };
 
 // ─── Shared helpers ────────────────────────────────────────────────────────
@@ -846,50 +801,6 @@ function buildSliderRow(param, compact = false) {
   return row;
 }
 
-function buildMiniSlider(param) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "dna-mini-slider";
-
-  const labelRow = document.createElement("div");
-  labelRow.className = "setting-label-row";
-
-  const label = document.createElement("label");
-  label.className = "setting-label";
-  label.textContent = param.label;
-
-  if (param.tip) {
-    const tip = document.createElement("span");
-    tip.className = "setting-tip small";
-    tip.textContent = "?";
-    tip.addEventListener("mouseenter", (e) => showTooltip(e.target, param.tip, "left"));
-    tip.addEventListener("mouseleave", hideTooltip);
-    label.appendChild(tip);
-  }
-
-  const valueSpan = document.createElement("span");
-  valueSpan.className = "setting-value";
-  valueSpan.textContent = formatValue(param.obj[param.key], param.step);
-
-  const slider = document.createElement("input");
-  slider.type = "range";
-  slider.className = "setting-slider";
-  slider.min = param.min;
-  slider.max = param.max;
-  slider.step = param.step;
-  slider.value = param.obj[param.key];
-
-  slider.addEventListener("input", () => {
-    const val = parseFloat(slider.value);
-    param.obj[param.key] = val;
-    valueSpan.textContent = formatValue(val, param.step);
-  });
-
-  labelRow.appendChild(label);
-  labelRow.appendChild(valueSpan);
-  wrapper.appendChild(labelRow);
-  wrapper.appendChild(slider);
-  return wrapper;
-}
 
 function formatValue(val, step) {
   if (step < 0.01) return val.toFixed(3);

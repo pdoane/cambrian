@@ -89,19 +89,13 @@ export const SHAPES = [
 /** Create a default species design */
 export function createDefaultSpecies() {
   const genes = {};
-  const mutRates = {};
-  const mutSteps = {};
   for (const def of GENE_DEFS) {
     genes[def.name] = def.default;
-    mutRates[def.name] = def.mutRate;
-    mutSteps[def.name] = def.mutStep;
   }
   return {
     id: crypto.randomUUID(),
     name: randomSpeciesName(),
     genes,
-    mutRates,
-    mutSteps,
     diet: "herbivore",
     sides: 0,
     count: 15,
@@ -112,7 +106,27 @@ export function createDefaultSpecies() {
 export function loadSpecies() {
   try {
     const raw = localStorage.getItem(SPECIES_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const list = JSON.parse(raw);
+      // Migrate: backfill new genes from defaults, remove obsolete per-gene mutRates/mutSteps,
+      // and pull values that moved from cfg to genes.
+      for (const sp of list) {
+        for (const def of GENE_DEFS) {
+          if (sp.genes[def.name] === undefined) {
+            // Check if this gene was previously in cfg
+            if (sp.cfg && sp.cfg[def.name] !== undefined) {
+              sp.genes[def.name] = sp.cfg[def.name];
+              delete sp.cfg[def.name];
+            } else {
+              sp.genes[def.name] = def.default;
+            }
+          }
+        }
+        delete sp.mutRates;
+        delete sp.mutSteps;
+      }
+      return list;
+    }
   } catch (e) {
     console.warn("Failed to load species:", e);
   }

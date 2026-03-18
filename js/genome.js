@@ -1,6 +1,7 @@
 // genome.js -- The DNA system.
 // Each creature has a Genome containing values for every gene defined in config.js.
 // When creatures mate, crossover averages both parents then applies mutation.
+// mutRate and mutStep are themselves genes — they control how all genes (including themselves) mutate.
 
 import { GENE_DEFS } from "./config.js";
 import { clamp } from "./utils.js";
@@ -28,10 +29,15 @@ export class Genome {
 
   /**
    * Create a child genome via sexual crossover of two parents.
-   * For each gene: take average of both parents, then apply mutation
-   * using average of both parents' mutation magnitude.
+   * For each gene: take average of both parents, then apply mutation.
+   * mutRate and mutStep are averaged from parents first, then used
+   * to mutate all genes (including themselves).
    */
   static crossover(genomeA, genomeB) {
+    // Average the parents' mutation parameters first
+    const mutRate = (genomeA.genes.mutRate + genomeB.genes.mutRate) / 2;
+    const mutStep = (genomeA.genes.mutStep + genomeB.genes.mutStep) / 2;
+
     const childGenes = {};
     for (const def of GENE_DEFS) {
       // Average of both parents
@@ -39,9 +45,10 @@ export class Genome {
       const valB = genomeB.genes[def.name];
       let value = (valA + valB) / 2;
 
-      // Mutate
-      if (Math.random() < def.mutRate) {
-        const delta = (Math.random() * 2 - 1) * def.mutStep;
+      // Mutate using the unified mutRate/mutStep
+      if (Math.random() < mutRate) {
+        const range = def.max - def.min;
+        const delta = (Math.random() * 2 - 1) * mutStep * range;
         value = clamp(value + delta, def.min, def.max);
       }
 

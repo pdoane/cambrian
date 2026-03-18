@@ -159,7 +159,7 @@ export class Renderer {
 
       const female = c.gender === "female" ? c : p;
       if (female.matingTimer > 0) {
-        const progress = 1 - female.matingTimer / female.cfg.matingDuration;
+        const progress = 1 - female.matingTimer / Math.round(female.matingDuration);
         const arcRadius = female.renderSize + 4;
         const startAngle = -Math.PI / 2;
         const endAngle = startAngle + progress * Math.PI * 2;
@@ -188,7 +188,7 @@ export class Renderer {
       const rs = c.renderSize;
 
       // Body color from hue gene (species color)
-      const lightness = 35 + 25 * Math.min(1, c.energy / c.cfg.maxEnergy);
+      const lightness = 35 + 25 * Math.min(1, c.energy / c.maxEnergy);
       const saturation = c.state === "pregnant" ? 50 : 70;
       const lightnessBonus = c.growthProgress < 1.0 ? 10 : 0;
 
@@ -196,7 +196,7 @@ export class Renderer {
       let injurySat = saturation;
       let injuryLight = lightness + lightnessBonus;
       if (c.injuryLevel !== "none") {
-        const healthFrac = c.health / c.cfg.maxHealth;
+        const healthFrac = c.health / c.maxHealth;
         injurySat = saturation * (0.3 + 0.7 * healthFrac);
         injuryLight = injuryLight * (0.6 + 0.4 * healthFrac);
       }
@@ -209,7 +209,7 @@ export class Renderer {
 
       // Health bar (only show when injured)
       if (c.injuryLevel !== "none") {
-        const healthFrac = c.health / c.cfg.maxHealth;
+        const healthFrac = c.health / c.maxHealth;
         const barWidth = rs * 2;
         const barHeight = 2;
         const barY = c.y - rs - 4;
@@ -233,7 +233,7 @@ export class Renderer {
 
       // Eating progress arc
       if (c.state === "eating" && c.eatTimer > 0) {
-        const progress = 1 - c.eatTimer / c.cfg.eatingDuration;
+        const progress = 1 - c.eatTimer / Math.round(c.eatingDuration);
         ctx.strokeStyle = "rgba(100, 220, 100, 0.7)";
         ctx.lineWidth = 2;
         ctx.beginPath();

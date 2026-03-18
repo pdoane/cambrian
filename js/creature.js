@@ -21,9 +21,11 @@ export class Creature {
     this.genome = genome || new Genome();
     this.cfg = cfg;
 
+    this._cacheGenes();
+
     this.energy = this.cfg.initial;
     this.hydration = this.cfg.maxHydration;
-    this.health = this.cfg.maxHealth;
+    this.health = this.maxHealth;
     this.age = 0;
     this.alive = true;
     this.gender = gender || (Math.random() < 0.5 ? "male" : "female");
@@ -61,8 +63,6 @@ export class Creature {
 
     this.diet = "herbivore";
     this.sides = 0;
-
-    this._cacheGenes();
   }
 
   _cacheGenes() {
@@ -76,6 +76,16 @@ export class Creature {
     this.pregnancyTime = this.genome.get("pregnancyTime");
     this.attack     = this.genome.get("attack");
     this.defense    = this.genome.get("defense");
+    // Metabolism genes (formerly in cfg)
+    this.maxEnergy       = this.genome.get("maxEnergy");
+    this.maxHealth       = this.genome.get("maxHealth");
+    this.moveCostBase    = this.genome.get("moveCostBase");
+    this.idleCost        = this.genome.get("idleCost");
+    this.hungerThreshold = this.genome.get("hungerThreshold");
+    this.thirstThreshold = this.genome.get("thirstThreshold");
+    this.matingDuration  = this.genome.get("matingDuration");
+    this.eatingDuration  = this.genome.get("eatingDuration");
+    this.maturityAge     = this.genome.get("maturityAge");
   }
 
   get isPredator() {
@@ -87,7 +97,7 @@ export class Creature {
   }
 
   get injuryLevel() {
-    const frac = this.health / this.cfg.maxHealth;
+    const frac = this.health / this.maxHealth;
     if (frac <= this.cfg.extremeThreshold) return "extreme";
     if (frac <= this.cfg.severeThreshold) return "severe";
     if (frac <= this.cfg.mildThreshold) return "mild";
@@ -136,8 +146,8 @@ export class Creature {
         || this.state === "growing" || this.state === "eating" || this.state === "killing"
         || this.state === "fleeing") return false;
     if (!this.hasEatenSinceMate || !this.hasDrunkSinceMate) return false;
-    if (this.energy < this.cfg.maxEnergy * 0.3) return false;
-    if (this.maturityTimer < this.cfg.maturityAge) return false;
+    if (this.energy < this.maxEnergy * 0.3) return false;
+    if (this.maturityTimer < this.maturityAge) return false;
     return true;
   }
 
@@ -181,9 +191,9 @@ export class Creature {
   }
 
   metabolize(isMoving) {
-    let energyCost = this.cfg.idleCost;
+    let energyCost = this.idleCost;
     if (isMoving) {
-      energyCost += this.cfg.moveCostBase * this.effectiveSpeed * this.effectiveSpeed * (this.size / 10);
+      energyCost += this.moveCostBase * this.effectiveSpeed * this.effectiveSpeed * (this.size / 10);
     }
     if (this.state === "pregnant") {
       energyCost *= this.cfg.pregnancyEnergyCostMult;
@@ -220,7 +230,7 @@ export class Creature {
   startEating(berry, berryEnergy) {
     this.state = "eating";
     this.eatingBerry = berry;
-    this.eatTimer = this.cfg.eatingDuration;
+    this.eatTimer = Math.round(this.eatingDuration);
     this.eatEnergyPending = berryEnergy;
     berry.eat();
   }
@@ -228,7 +238,7 @@ export class Creature {
   tickEating() {
     this.eatTimer--;
     if (this.eatTimer <= 0) {
-      this.energy = Math.min(this.energy + this.eatEnergyPending * this.efficiency, this.cfg.maxEnergy);
+      this.energy = Math.min(this.energy + this.eatEnergyPending * this.efficiency, this.maxEnergy);
       this.hasEatenSinceMate = true;
       this.eatingBerry = null;
       this.eatEnergyPending = 0;
@@ -261,10 +271,10 @@ export class Creature {
   startMating(partner) {
     this.state = "mating";
     this.matePartner = partner;
-    this.matingTimer = this.cfg.matingDuration;
+    this.matingTimer = Math.round(this.matingDuration);
     partner.state = "mating";
     partner.matePartner = this;
-    partner.matingTimer = partner.cfg.matingDuration;
+    partner.matingTimer = Math.round(partner.matingDuration);
   }
 
   tickMating() {
@@ -315,7 +325,7 @@ export class Creature {
       );
       baby.energy = this.cfg.initial * 0.7;
       baby.hydration = this.cfg.maxHydration * 0.7;
-      baby.health = this.cfg.maxHealth;
+      baby.health = baby.maxHealth;
       baby.hasEatenSinceMate = false;
       baby.hasDrunkSinceMate = false;
       baby.maturityTimer = 0;

@@ -120,7 +120,7 @@ export class Simulation {
         // If prey died, create corpse and predator gets energy
         if (!prey.alive) {
           world.addCorpse(prey);
-          c.energy = Math.min(c.energy + c.cfg.corpseEnergy * 0.5, c.cfg.maxEnergy);
+          c.energy = Math.min(c.energy + c.cfg.corpseEnergy * 0.5, c.maxEnergy);
           c.hasEatenSinceMate = true;
           c.state = "idle";
           c.huntTarget = null;
@@ -169,7 +169,7 @@ export class Simulation {
     }
 
     // Priority 1: Seek food when hungry
-    const hungryThreshold = c.cfg.maxEnergy * c.cfg.hungerThreshold;
+    const hungryThreshold = c.maxEnergy * c.hungerThreshold;
     if (c.energy < hungryThreshold) {
       // Carnivores/omnivores can eat corpses
       if (c.diet !== "herbivore") {
@@ -180,7 +180,7 @@ export class Simulation {
           c.move(world.width, world.height);
           if (distSq(c.x, c.y, corpse.x, corpse.y) < c.size * c.size) {
             const eaten = corpse.consume(WORLD.berryEnergy * c.efficiency);
-            c.energy = Math.min(c.energy + eaten, c.cfg.maxEnergy);
+            c.energy = Math.min(c.energy + eaten, c.maxEnergy);
             c.hasEatenSinceMate = true;
           }
           return;
@@ -205,7 +205,7 @@ export class Simulation {
     }
 
     // Priority 2: Seek water when thirsty
-    const thirstyThreshold = c.cfg.maxHydration * c.cfg.thirstThreshold;
+    const thirstyThreshold = c.cfg.maxHydration * c.thirstThreshold;
     if (c.hydration < thirstyThreshold) {
       const pool = world.findNearestWaterPool(c.x, c.y, range);
       if (pool) {
