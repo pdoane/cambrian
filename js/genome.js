@@ -1,6 +1,6 @@
 // genome.js -- The DNA system.
 // Each creature has a Genome containing values for every gene defined in config.js.
-// When creatures mate, crossover picks each gene from one parent, then mutates.
+// When creatures mate, crossover averages both parents then applies mutation.
 
 import { GENE_DEFS } from "./config.js";
 import { clamp } from "./utils.js";
@@ -28,15 +28,16 @@ export class Genome {
 
   /**
    * Create a child genome via sexual crossover of two parents.
-   * For each gene: pick randomly from parent A or B, then apply mutation.
+   * For each gene: take average of both parents, then apply mutation
+   * using average of both parents' mutation magnitude.
    */
   static crossover(genomeA, genomeB) {
     const childGenes = {};
     for (const def of GENE_DEFS) {
-      // Pick from one parent randomly
-      let value = Math.random() < 0.5
-        ? genomeA.genes[def.name]
-        : genomeB.genes[def.name];
+      // Average of both parents
+      const valA = genomeA.genes[def.name];
+      const valB = genomeB.genes[def.name];
+      let value = (valA + valB) / 2;
 
       // Mutate
       if (Math.random() < def.mutRate) {

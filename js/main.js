@@ -5,7 +5,7 @@ import { Simulation } from "./simulation.js";
 import { Renderer } from "./renderer.js";
 import { Stats } from "./stats.js";
 import { Charts } from "./charts.js";
-import { UI } from "./ui.js";
+import { UI, getLaunchConfig } from "./ui.js";
 
 let animationId = null;
 
@@ -20,24 +20,41 @@ function start() {
   canvas.height = canvas.parentElement.clientHeight;
 
   const world = new World();
-  world.initialize();
+
+  // Use species releases if any are configured
+  const config = getLaunchConfig();
+  const releases = config.releases;
+  world.initialize(releases.length > 0 ? releases : null);
 
   const simulation = new Simulation(world);
   const renderer = new Renderer(canvas, world);
   const stats = new Stats();
   const charts = new Charts(stats);
 
-  // Restart callback re-initializes the simulation
   const ui = new UI(simulation, () => start());
 
   simulation.running = true;
   document.getElementById("btn-play-pause").textContent = "Pause";
 
+  let frameCount = 0;
+
   function gameLoop() {
+    frameCount++;
     if (simulation.running) {
-      for (let i = 0; i < simulation.ticksPerFrame; i++) {
-        simulation.tick();
-        stats.update(world);
+      const speed = simulation.speed;
+      if (speed >= 1) {
+        // speed 1+ = that many ticks per frame
+        for (let i = 0; i < speed; i++) {
+          simulation.tick();
+          stats.update(world);
+        }
+      } else {
+        // speed < 1 = tick every N frames
+        const interval = Math.round(1 / speed);
+        if (frameCount % interval === 0) {
+          simulation.tick();
+          stats.update(world);
+        }
       }
     }
 

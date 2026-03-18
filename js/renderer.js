@@ -1,20 +1,25 @@
 // renderer.js -- Draws the simulation world onto an HTML Canvas.
-// Visual design: bushes with berry rings, water pools with gradients,
-// gendered creatures colored by hue gene (species), heading line colored by state,
-// mating links, pregnancy glow, baby sparkles.
+// Visual design: bushes with berry arcs, water pools, corpses with red arcs,
+// gendered creatures with symbols (^ male, v female, o child),
+// heading line colored by state, mating links, pregnancy glow, injury tinting.
 
-import { ENERGY } from "./config.js";
+import { WORLD } from "./config.js";
+import { drawBody, drawGenderSymbol } from "./shapes.js";
 
-// State → heading line color map
+// State → heading line color map (new scheme)
 const STATE_COLORS = {
-  seekingFood:  "#44cc44",
-  seekingWater: "#4488ff",
-  seekingMate:  "#ff66aa",
-  mating:       "#ff66aa",
+  eating:       "#44cc44",   // green
+  seekingFood:  "#ffffff",   // white (looking for food)
+  seekingWater: "#ffffff",   // white (looking for water)
+  drinking:     "#4488ff",   // blue
+  seekingMate:  "rainbow",   // special: rainbow gradient
+  mating:       "rainbow",
   pregnant:     "#ffbb44",
-  drinking:     "#4488ff",
   growing:      "#88ddaa",
-  idle:         "#666688",
+  idle:         "#9966cc",   // purple (just chillen)
+  fleeing:      "#ff3333",   // red (running from predator)
+  hunting:      "#ff6600",   // orange (chasing prey)
+  killing:      "#ff3333",   // red
 };
 
 export class Renderer {
@@ -31,23 +36,21 @@ export class Renderer {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Dark background (full canvas)
     ctx.fillStyle = "#1a1a2e";
     ctx.fillRect(0, 0, w, h);
 
-    // Center the world within the canvas
     const ox = Math.floor((w - world.width) / 2);
     const oy = Math.floor((h - world.height) / 2);
     ctx.save();
     ctx.translate(ox, oy);
 
-    // World boundary walls
     ctx.strokeStyle = "rgba(126, 207, 255, 0.3)";
     ctx.lineWidth = 2;
     ctx.strokeRect(1, 1, world.width - 2, world.height - 2);
 
     this._drawWaterPools(ctx, world);
     this._drawBushes(ctx, world);
+    this._drawCorpses(ctx, world);
     this._drawMatingLinks(ctx, world);
     this._drawCreatures(ctx, world);
     this._drawHUD(ctx, world);
@@ -64,10 +67,8 @@ export class Renderer {
     const time = world.tickCount * 0.02;
 
     for (const pool of world.waterPools) {
-      // Subtle pulse animation
       const pulse = 0.85 + 0.15 * Math.sin(time + pool.x * 0.01);
 
-      // Radial gradient
       const grad = ctx.createRadialGradient(
         pool.x, pool.y, 0,
         pool.x, pool.y, pool.radius
@@ -90,17 +91,50 @@ export class Renderer {
       ctx.arc(bush.x, bush.y, bush.radius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Berries
-      for (const berry of bush.berries) {
-        if (berry.available) {
-          ctx.fillStyle = "hsl(260, 70%, 55%)";
-        } else {
-          ctx.fillStyle = "rgba(100, 60, 160, 0.15)";
-        }
+      // Purple progress arc showing berry percentage
+      const fraction = bush.availableCount / bush.maxBerries;
+      if (fraction > 0) {
+        ctx.strokeStyle = "rgba(160, 80, 220, 0.8)";
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(berry.slotX, berry.slotY, 3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.arc(bush.x, bush.y, bush.radius + 2,
+          -Math.PI / 2, -Math.PI / 2 + fraction * Math.PI * 2);
+        ctx.stroke();
       }
+
+      // Individual berries removed — the purple arc conveys remaining supply
+    }
+  }
+
+  _drawCorpses(ctx, world) {
+    for (const corpse of world.corpses) {
+      // Red circle for corpse
+      const alpha = 0.3 + 0.4 * corpse.fractionRemaining;
+      ctx.fillStyle = `rgba(120, 30, 30, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(corpse.x, corpse.y, corpse.size, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Red progress arc showing remaining energy
+      if (corpse.fractionRemaining > 0) {
+        ctx.strokeStyle = "rgba(220, 50, 50, 0.8)";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(corpse.x, corpse.y, corpse.size + 2,
+          -Math.PI / 2, -Math.PI / 2 + corpse.fractionRemaining * Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // X mark
+      ctx.strokeStyle = "rgba(200, 60, 60, 0.6)";
+      ctx.lineWidth = 1.5;
+      const s = corpse.size * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(corpse.x - s, corpse.y - s);
+      ctx.lineTo(corpse.x + s, corpse.y + s);
+      ctx.moveTo(corpse.x + s, corpse.y - s);
+      ctx.lineTo(corpse.x - s, corpse.y + s);
+      ctx.stroke();
     }
   }
 
@@ -114,7 +148,6 @@ export class Renderer {
 
       const p = c.matePartner;
 
-      // Pink dashed line
       ctx.strokeStyle = "rgba(255, 100, 180, 0.5)";
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
@@ -124,10 +157,9 @@ export class Renderer {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Progress arc on female
       const female = c.gender === "female" ? c : p;
       if (female.matingTimer > 0) {
-        const progress = 1 - female.matingTimer / ENERGY.matingDuration;
+        const progress = 1 - female.matingTimer / female.cfg.matingDuration;
         ctx.strokeStyle = "rgba(255, 100, 180, 0.7)";
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -145,25 +177,36 @@ export class Renderer {
       const rs = c.renderSize;
 
       // Body color from hue gene (species color)
-      const lightness = 35 + 25 * Math.min(1, c.energy / ENERGY.maxEnergy);
+      const lightness = 35 + 25 * Math.min(1, c.energy / c.cfg.maxEnergy);
       const saturation = c.state === "pregnant" ? 50 : 70;
-      // Growing creatures are slightly brighter
       const lightnessBonus = c.growthProgress < 1.0 ? 10 : 0;
-      ctx.fillStyle = `hsl(${c.hue}, ${saturation}%, ${lightness + lightnessBonus}%)`;
 
-      if (c.growthProgress < 1.0) {
-        // Baby: triangle
-        this._drawTriangle(ctx, c.x, c.y, rs);
-        ctx.fill();
-      } else if (c.gender === "male") {
-        // Male: square
-        this._drawSquare(ctx, c.x, c.y, rs);
-        ctx.fill();
-      } else {
-        // Female: circle
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, rs, 0, Math.PI * 2);
-        ctx.fill();
+      // Injury tinting: reduce saturation and add red shift for injured creatures
+      let injurySat = saturation;
+      let injuryLight = lightness + lightnessBonus;
+      if (c.injuryLevel !== "none") {
+        const healthFrac = c.health / c.cfg.maxHealth;
+        injurySat = saturation * (0.3 + 0.7 * healthFrac);
+        injuryLight = injuryLight * (0.6 + 0.4 * healthFrac);
+      }
+
+      ctx.fillStyle = `hsl(${c.hue}, ${injurySat}%, ${injuryLight}%)`;
+
+      drawBody(ctx, c.x, c.y, rs, c.sides);
+      ctx.fill();
+      drawGenderSymbol(ctx, c.x, c.y, rs, c.gender, c.growthProgress);
+
+      // Health bar (only show when injured)
+      if (c.injuryLevel !== "none") {
+        const healthFrac = c.health / c.cfg.maxHealth;
+        const barWidth = rs * 2;
+        const barHeight = 2;
+        const barY = c.y - rs - 4;
+        ctx.fillStyle = "rgba(50, 50, 50, 0.6)";
+        ctx.fillRect(c.x - barWidth / 2, barY, barWidth, barHeight);
+        const healthColor = healthFrac > 0.5 ? "#44cc44" : healthFrac > 0.2 ? "#ffaa00" : "#ff3333";
+        ctx.fillStyle = healthColor;
+        ctx.fillRect(c.x - barWidth / 2, barY, barWidth * healthFrac, barHeight);
       }
 
       // Pregnancy glow ring
@@ -177,34 +220,43 @@ export class Renderer {
         ctx.stroke();
       }
 
-      // Heading line colored by state
+      // Eating progress arc
+      if (c.state === "eating" && c.eatTimer > 0) {
+        const progress = 1 - c.eatTimer / c.cfg.eatingDuration;
+        ctx.strokeStyle = "rgba(100, 220, 100, 0.7)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, rs + 3,
+          -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Heading line colored by state — starts at edge of body, not center
       const stateColor = STATE_COLORS[c.state] || STATE_COLORS.idle;
-      ctx.strokeStyle = stateColor;
-      ctx.lineWidth = 2.5;
+      const headStartX = c.x + Math.cos(c.heading) * rs;
+      const headStartY = c.y + Math.sin(c.heading) * rs;
+      const headEndX = c.x + Math.cos(c.heading) * rs * 2.2;
+      const headEndY = c.y + Math.sin(c.heading) * rs * 2.2;
+      if (stateColor === "rainbow") {
+        const grad = ctx.createLinearGradient(headStartX, headStartY, headEndX, headEndY);
+        grad.addColorStop(0, "#ff0000");
+        grad.addColorStop(0.17, "#ff8800");
+        grad.addColorStop(0.33, "#ffff00");
+        grad.addColorStop(0.5, "#00ff00");
+        grad.addColorStop(0.67, "#0088ff");
+        grad.addColorStop(0.83, "#8800ff");
+        grad.addColorStop(1, "#ff00ff");
+        ctx.strokeStyle = grad;
+      } else {
+        ctx.strokeStyle = stateColor;
+      }
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(c.x, c.y);
-      ctx.lineTo(
-        c.x + Math.cos(c.heading) * rs * 2,
-        c.y + Math.sin(c.heading) * rs * 2
-      );
+      ctx.moveTo(headStartX, headStartY);
+      ctx.lineTo(headEndX, headEndY);
       ctx.stroke();
     }
-  }
-
-  _drawSquare(ctx, x, y, r) {
-    const s = r * 0.85;
-    const rad = s * 0.2;
-    ctx.beginPath();
-    ctx.roundRect(x - s, y - s, s * 2, s * 2, rad);
-  }
-
-  _drawTriangle(ctx, x, y, r) {
-    const s = r * 0.95;
-    ctx.beginPath();
-    ctx.moveTo(x, y - s);
-    ctx.lineTo(x + s, y + s * 0.7);
-    ctx.lineTo(x - s, y + s * 0.7);
-    ctx.closePath();
   }
 
   _drawHUD(ctx, world) {
@@ -219,8 +271,10 @@ export class Renderer {
 
     ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
     ctx.font = "14px monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
     ctx.fillText(
-      `Tick: ${world.tickCount}   Pop: ${world.creatures.length} (${males}M/${females}F)   Berries: ${totalAvailable}/${totalBerries}`,
+      `Tick: ${world.tickCount}   Pop: ${world.creatures.length}/${WORLD.maxCreatures} (${males}M/${females}F)   Berries: ${totalAvailable}/${totalBerries}   Corpses: ${world.corpses.length}`,
       10, 20
     );
   }
@@ -239,7 +293,6 @@ export class Renderer {
     const w = rect.width;
     const h = rect.height;
 
-    // Background matching play area
     ctx.fillStyle = "#1a1a2e";
     ctx.fillRect(0, 0, w, h);
 
@@ -255,34 +308,42 @@ export class Renderer {
     // -- Shapes --
     ctx.font = "9px monospace";
     ctx.fillStyle = dimColor;
+    ctx.textAlign = "left";
     ctx.fillText("SHAPES", left, y);
     y += 16;
 
-    // Male: square
+    // Male: ^ chevron
     ctx.fillStyle = "hsl(200, 70%, 50%)";
-    this._drawSquare(ctx, iconX, y, 5);
+    drawBody(ctx, iconX, y, 7, 0);
     ctx.fill();
+    drawGenderSymbol(ctx, iconX, y, 7, "male", 1.0);
     ctx.fillStyle = labelColor;
-    ctx.font = "10px monospace";
-    ctx.fillText("Male", textX, y);
-    y += 16;
+    ctx.font = "11px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText("Male", textX + 2, y);
+    y += 20;
 
-    // Female: circle
+    // Female: circle with v chevron
     ctx.fillStyle = "hsl(200, 70%, 50%)";
-    ctx.beginPath();
-    ctx.arc(iconX, y, 5, 0, Math.PI * 2);
+    drawBody(ctx, iconX, y, 7, 0);
     ctx.fill();
+    drawGenderSymbol(ctx, iconX, y, 7, "female", 1.0);
     ctx.fillStyle = labelColor;
-    ctx.fillText("Female", textX, y);
-    y += 16;
+    ctx.font = "11px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText("Female", textX + 2, y);
+    y += 20;
 
-    // Baby: triangle
-    ctx.fillStyle = "hsl(200, 70%, 50%)";
-    this._drawTriangle(ctx, iconX, y, 5);
+    // Child: circle with small circle
+    ctx.fillStyle = "hsl(200, 70%, 60%)";
+    drawBody(ctx, iconX, y, 5, 0);
     ctx.fill();
+    drawGenderSymbol(ctx, iconX, y, 5, "female", 0.5);
     ctx.fillStyle = labelColor;
-    ctx.fillText("Baby", textX, y);
-    y += 22;
+    ctx.font = "11px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText("Child", textX + 2, y);
+    y += 24;
 
     // -- State heading lines --
     ctx.font = "9px monospace";
@@ -295,19 +356,28 @@ export class Renderer {
     y += 22;
 
     const states = [
-      { label: "Food",     color: "#44cc44" },
-      { label: "Water",    color: "#4488ff" },
-      { label: "Drink",    color: "#4488ff" },
-      { label: "Mate",     color: "#ff66aa" },
-      { label: "Mating",   color: "#ff66aa" },
-      { label: "Pregnant", color: "#ffbb44" },
-      { label: "Growing",  color: "#88ddaa" },
-      { label: "Idle",     color: "#666688" },
+      { label: "Eating",    color: "#44cc44" },
+      { label: "Drinking",  color: "#4488ff" },
+      { label: "Seeking",   color: "#ffffff" },
+      { label: "Mate",      color: "rainbow" },
+      { label: "Fleeing",   color: "#ff3333" },
+      { label: "Hunting",   color: "#ff6600" },
+      { label: "Pregnant",  color: "#ffbb44" },
+      { label: "Growing",   color: "#88ddaa" },
+      { label: "Idle",      color: "#9966cc" },
     ];
 
     ctx.font = "10px monospace";
     for (const s of states) {
-      ctx.strokeStyle = s.color;
+      if (s.color === "rainbow") {
+        const grad = ctx.createLinearGradient(left, y, left + 12, y);
+        grad.addColorStop(0, "#ff0000");
+        grad.addColorStop(0.5, "#00ff00");
+        grad.addColorStop(1, "#8800ff");
+        ctx.strokeStyle = grad;
+      } else {
+        ctx.strokeStyle = s.color;
+      }
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(left, y);
@@ -315,6 +385,7 @@ export class Renderer {
       ctx.stroke();
 
       ctx.fillStyle = labelColor;
+      ctx.textAlign = "left";
       ctx.fillText(s.label, textX, y);
       y += 15;
     }
@@ -364,5 +435,19 @@ export class Renderer {
     ctx.fill();
     ctx.fillStyle = labelColor;
     ctx.fillText("Water", textX, y);
+    y += 16;
+
+    // Corpse
+    ctx.fillStyle = "rgba(120, 30, 30, 0.6)";
+    ctx.beginPath();
+    ctx.arc(iconX, y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(220, 50, 50, 0.8)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(iconX, y, 7, -Math.PI / 2, Math.PI);
+    ctx.stroke();
+    ctx.fillStyle = labelColor;
+    ctx.fillText("Corpse", textX, y);
   }
 }

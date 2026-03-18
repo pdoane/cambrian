@@ -1,9 +1,9 @@
 // creature.js -- A living creature in the simulation.
-// Creatures have gender, hydration, a behavioral state machine, and sexual reproduction.
-// States: idle, seekingFood, seekingWater, seekingMate, mating, pregnant, drinking, growing
+// Each creature carries its own cfg (energy/injury config) from its species design.
+// States: idle, seekingFood, seekingWater, seekingMate, mating, pregnant, drinking, eating, growing, fleeing, hunting, killing
 
 import { Genome } from "./genome.js";
-import { ENERGY, WORLD } from "./config.js";
+import { WORLD } from "./config.js";
 
 let nextId = 0;
 
@@ -14,45 +14,54 @@ export function hueDistance(a, b) {
 }
 
 export class Creature {
-  constructor(x, y, genome = null, gender = null) {
+  constructor(x, y, genome = null, gender = null, cfg = null) {
     this.id = nextId++;
     this.x = x;
     this.y = y;
     this.genome = genome || new Genome();
-    this.energy = ENERGY.initial;
-    this.hydration = ENERGY.maxHydration;
+    this.cfg = cfg;
+
+    this.energy = this.cfg.initial;
+    this.hydration = this.cfg.maxHydration;
+    this.health = this.cfg.maxHealth;
     this.age = 0;
     this.alive = true;
     this.gender = gender || (Math.random() < 0.5 ? "male" : "female");
 
-    // Direction of movement (radians)
     this.heading = Math.random() * Math.PI * 2;
 
-    // State machine
     this.state = "idle";
-    this.target = null; // reference to target object (berry, pool, mate)
+    this.target = null;
 
-    // Mating state
     this.matePartner = null;
     this.matingTimer = 0;
-    this.hasEatenSinceMate = true;  // start true so initial mating is possible
+    this.hasEatenSinceMate = true;
     this.hasDrunkSinceMate = true;
 
-    // Pregnancy state (females only)
     this.pregnancyTimer = 0;
     this.pregnancyDuration = 0;
-    this.mateGenome = null; // stored partner genome for crossover
+    this.mateGenome = null;
 
-    // Growth state (babies)
-    this.growthProgress = 1.0; // 0→1, starts at 1.0 for adults
+    this.growthProgress = 1.0;
     this.growthDuration = 0;
     this.sparkleOffsets = null;
     this.sparkleTick = 0;
+    this.maturityTimer = 0;
 
-    // Drinking state
     this.drinkTimer = 0;
 
-    // Cache gene values
+    this.eatTimer = 0;
+    this.eatingBerry = null;
+    this.eatEnergyPending = 0;
+
+    this.huntTarget = null;
+    this.attacker = null;
+    this.needsFoodToHeal = false;
+    this.needsWaterToHeal = false;
+
+    this.diet = "herbivore";
+    this.sides = 0;
+
     this._cacheGenes();
   }
 
@@ -65,25 +74,51 @@ export class Creature {
     this.charisma   = this.genome.get("charisma");
     this.reproductiveCapability = this.genome.get("reproductiveCapability");
     this.pregnancyTime = this.genome.get("pregnancyTime");
+    this.attack     = this.genome.get("attack");
+    this.defense    = this.genome.get("defense");
   }
 
-  /** Effective speed accounting for pregnancy and growth */
+  get isPredator() {
+    return this.attack > 0.3 && this.diet !== "herbivore";
+  }
+
+  get canEatPlants() {
+    return this.diet !== "carnivore";
+  }
+
+  get injuryLevel() {
+    const frac = this.health / this.cfg.maxHealth;
+    if (frac <= this.cfg.extremeThreshold) return "extreme";
+    if (frac <= this.cfg.severeThreshold) return "severe";
+    if (frac <= this.cfg.mildThreshold) return "mild";
+    return "none";
+  }
+
+  get injuryMult() {
+    switch (this.injuryLevel) {
+      case "extreme": return this.cfg.extremeMult;
+      case "severe":  return this.cfg.severeMult;
+      case "mild":    return this.cfg.mildMult;
+      default:        return 1.0;
+    }
+  }
+
   get effectiveSpeed() {
     let s = this.speed;
-    if (this.state === "pregnant") s *= ENERGY.pregnancySpeedMult;
+    if (this.state === "pregnant") s *= this.cfg.pregnancySpeedMult;
     if (this.growthProgress < 1.0) s *= (0.8 + 0.2 * this.growthProgress);
+    s *= this.injuryMult;
     return s;
   }
 
-  /** Effective eyesight accounting for pregnancy and growth */
   get effectiveEyesight() {
     let e = this.eyesight;
-    if (this.state === "pregnant") e *= ENERGY.pregnancyEyesightMult;
+    if (this.state === "pregnant") e *= this.cfg.pregnancyEyesightMult;
     if (this.growthProgress < 1.0) e *= (0.8 + 0.2 * this.growthProgress);
+    e *= this.injuryMult;
     return e;
   }
 
-  /** Rendered size accounting for pregnancy swell and growth */
   get renderSize() {
     let s = this.size;
     if (this.growthProgress < 1.0) {
@@ -96,30 +131,43 @@ export class Creature {
     return s;
   }
 
-  /** Whether this creature can seek a mate */
   get canMate() {
-    if (this.state === "mating" || this.state === "pregnant" || this.state === "drinking" || this.state === "growing") return false;
+    if (this.state === "mating" || this.state === "pregnant" || this.state === "drinking"
+        || this.state === "growing" || this.state === "eating" || this.state === "killing"
+        || this.state === "fleeing") return false;
     if (!this.hasEatenSinceMate || !this.hasDrunkSinceMate) return false;
-    if (this.energy < ENERGY.maxEnergy * 0.3) return false;
+    if (this.energy < this.cfg.maxEnergy * 0.3) return false;
+    if (this.maturityTimer < this.cfg.maturityAge) return false;
     return true;
   }
 
-  /** Check if another creature is same species (hue within threshold) */
+  get canFlee() {
+    if (this.state === "eating" || this.state === "drinking" || this.state === "mating") return false;
+    return true;
+  }
+
   isSameSpecies(other) {
     return hueDistance(this.hue, other.hue) <= WORLD.speciesHueThreshold;
   }
 
-  /** Steer toward a point */
+  wouldHunt(other) {
+    if (!this.isPredator) return false;
+    if (other.isPredator && other.attack >= this.attack) return false;
+    return true;
+  }
+
   steerToward(tx, ty) {
     this.heading = Math.atan2(ty - this.y, tx - this.x);
   }
 
-  /** Small random turn for wandering */
+  steerAwayFrom(tx, ty) {
+    this.heading = Math.atan2(this.y - ty, this.x - tx);
+  }
+
   wander() {
     this.heading += (Math.random() - 0.5) * 0.5;
   }
 
-  /** Move forward. Bounces off walls. */
   move(worldWidth, worldHeight) {
     const spd = this.effectiveSpeed;
     this.x += Math.cos(this.heading) * spd;
@@ -132,70 +180,98 @@ export class Creature {
     else if (this.y > worldHeight - s) { this.y = worldHeight - s; this.heading = -this.heading; }
   }
 
-  /** Spend energy and hydration each tick. */
   metabolize(isMoving) {
-    let energyCost = ENERGY.idleCost;
+    let energyCost = this.cfg.idleCost;
     if (isMoving) {
-      energyCost += ENERGY.moveCostBase * this.effectiveSpeed * this.effectiveSpeed * (this.size / 10);
+      energyCost += this.cfg.moveCostBase * this.effectiveSpeed * this.effectiveSpeed * (this.size / 10);
     }
     if (this.state === "pregnant") {
-      energyCost *= ENERGY.pregnancyEnergyCostMult;
+      energyCost *= this.cfg.pregnancyEnergyCostMult;
     }
     this.energy -= energyCost;
 
-    // Hydration loss scales with speed when moving
-    let hydrationLoss = ENERGY.hydrationLossRate;
+    let hydrationLoss = this.cfg.hydrationLossRate;
     if (isMoving) {
       hydrationLoss *= (1 + this.effectiveSpeed * 0.2);
     }
     this.hydration -= hydrationLoss;
 
+    if (this.energy <= 0) {
+      this.energy = 0;
+      this.health -= this.cfg.healthDrainNoFood;
+    }
+    if (this.hydration <= 0) {
+      this.hydration = 0;
+      this.health -= this.cfg.healthDrainNoWater;
+    }
+
     this.age++;
 
-    if (this.energy <= 0 || this.hydration <= 0) {
+    if (this.growthProgress >= 1.0 && this.state !== "growing") {
+      this.maturityTimer++;
+    }
+
+    if (this.health <= 0) {
+      this.health = 0;
       this.alive = false;
     }
   }
 
-  /** Eat a berry */
-  eatBerry(berryEnergy) {
-    this.energy = Math.min(this.energy + berryEnergy * this.efficiency, ENERGY.maxEnergy);
-    this.hasEatenSinceMate = true;
+  startEating(berry, berryEnergy) {
+    this.state = "eating";
+    this.eatingBerry = berry;
+    this.eatTimer = this.cfg.eatingDuration;
+    this.eatEnergyPending = berryEnergy;
+    berry.eat();
   }
 
-  /** Start drinking water */
+  tickEating() {
+    this.eatTimer--;
+    if (this.eatTimer <= 0) {
+      this.energy = Math.min(this.energy + this.eatEnergyPending * this.efficiency, this.cfg.maxEnergy);
+      this.hasEatenSinceMate = true;
+      this.eatingBerry = null;
+      this.eatEnergyPending = 0;
+      if (this.needsFoodToHeal && this.needsWaterToHeal === false) {
+        this.needsFoodToHeal = false;
+      }
+      this.state = "idle";
+      return true;
+    }
+    return false;
+  }
+
   startDrinking() {
     this.state = "drinking";
-    this.drinkTimer = ENERGY.drinkDuration;
+    this.drinkTimer = this.cfg.drinkDuration;
   }
 
-  /** Tick the drinking process */
   tickDrinking() {
     this.drinkTimer--;
     if (this.drinkTimer <= 0) {
-      this.hydration = Math.min(this.hydration + ENERGY.waterDrinkAmount, ENERGY.maxHydration);
+      this.hydration = Math.min(this.hydration + this.cfg.waterDrinkAmount, this.cfg.maxHydration);
       this.hasDrunkSinceMate = true;
+      if (this.needsWaterToHeal && this.needsFoodToHeal === false) {
+        this.needsWaterToHeal = false;
+      }
       this.state = "idle";
     }
   }
 
-  /** Start mating with a partner */
   startMating(partner) {
     this.state = "mating";
     this.matePartner = partner;
-    this.matingTimer = ENERGY.matingDuration;
+    this.matingTimer = this.cfg.matingDuration;
     partner.state = "mating";
     partner.matePartner = this;
-    partner.matingTimer = ENERGY.matingDuration;
+    partner.matingTimer = partner.cfg.matingDuration;
   }
 
-  /** Tick the mating process. Returns true when mating completes. */
   tickMating() {
     this.matingTimer--;
     return this.matingTimer <= 0;
   }
 
-  /** Called on the female when mating completes */
   becomePregnant(partnerGenome) {
     this.state = "pregnant";
     this.mateGenome = partnerGenome;
@@ -206,22 +282,19 @@ export class Creature {
     this.matePartner = null;
   }
 
-  /** Tick pregnancy. Returns true when ready to give birth. */
   tickPregnancy() {
     this.pregnancyTimer--;
     return this.pregnancyTimer <= 0;
   }
 
-  /** Give birth: returns array of baby creatures */
   giveBirth() {
     const avgRepro = (this.reproductiveCapability +
       (this.mateGenome ? new Genome(this.mateGenome.genes).get("reproductiveCapability") : this.reproductiveCapability)) / 2;
     const babyCount = Math.max(1, Math.round(avgRepro));
     const babies = [];
 
-    // Gestation bonus: longer pregnancy = stronger babies
     const gestationSeconds = (this.pregnancyDuration) / 60;
-    const gestationBonus = 1.0 + ENERGY.gestationSpeedBonus * gestationSeconds;
+    const gestationBonus = 1.0 + this.cfg.gestationSpeedBonus * gestationSeconds;
 
     for (let i = 0; i < babyCount; i++) {
       const childGenome = Genome.crossover(this.genome, this.mateGenome);
@@ -231,20 +304,23 @@ export class Creature {
         this.x + Math.cos(angle) * offset,
         this.y + Math.sin(angle) * offset,
         childGenome,
-        Math.random() < 0.5 ? "male" : "female"
+        Math.random() < 0.5 ? "male" : "female",
+        this.cfg
       );
       baby.state = "growing";
       baby.growthProgress = 0;
-      // Growth duration clamped between base and max
       baby.growthDuration = Math.min(
-        ENERGY.growthDuration * gestationBonus,
-        ENERGY.growthDurationMax
+        this.cfg.growthDuration * gestationBonus,
+        this.cfg.growthDurationMax
       );
-      baby.energy = ENERGY.initial * 0.7;
-      baby.hydration = ENERGY.maxHydration * 0.7;
+      baby.energy = this.cfg.initial * 0.7;
+      baby.hydration = this.cfg.maxHydration * 0.7;
+      baby.health = this.cfg.maxHealth;
       baby.hasEatenSinceMate = false;
       baby.hasDrunkSinceMate = false;
-      // Initialize sparkle offsets
+      baby.maturityTimer = 0;
+      baby.diet = this.diet;
+      baby.sides = this.sides;
       baby._resetSparkles();
       babies.push(baby);
     }
@@ -256,14 +332,12 @@ export class Creature {
     return babies;
   }
 
-  /** Tick growth. Returns true when fully grown. */
   tickGrowth() {
     if (this.growthDuration <= 0) {
       this.growthProgress = 1.0;
       return true;
     }
     this.growthProgress += 1 / this.growthDuration;
-    // Reposition sparkles every ~10 ticks
     this.sparkleTick++;
     if (this.sparkleTick >= 10) {
       this._resetSparkles();
@@ -272,6 +346,26 @@ export class Creature {
     if (this.growthProgress >= 1.0) {
       this.growthProgress = 1.0;
       this.sparkleOffsets = null;
+      return true;
+    }
+    return false;
+  }
+
+  takeDamage(attackPower) {
+    const damage = Math.max(0.05, attackPower - this.defense) * this.cfg.predatorKillDamage;
+    this.health -= damage;
+    if (this.health <= 0) {
+      this.health = 0;
+      this.alive = false;
+    }
+  }
+
+  tryEscape() {
+    if (Math.random() < this.cfg.escapeChance) {
+      this.needsFoodToHeal = true;
+      this.needsWaterToHeal = true;
+      this.attacker = null;
+      this.state = "idle";
       return true;
     }
     return false;
