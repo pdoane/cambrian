@@ -8,16 +8,26 @@ import { Charts } from "./charts.js";
 import { UI, getLaunchConfig } from "./ui.js";
 
 let animationId = null;
+let resizeHandler = null;
 
 function start() {
   // Cancel any existing game loop
   if (animationId) {
     cancelAnimationFrame(animationId);
   }
+  if (resizeHandler) {
+    window.removeEventListener("resize", resizeHandler);
+  }
 
   const canvas = document.getElementById("world-canvas");
-  canvas.width = canvas.parentElement.clientWidth;
-  canvas.height = canvas.parentElement.clientHeight;
+
+  resizeHandler = () => {
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+  };
+  resizeHandler();
+  window.addEventListener("resize", resizeHandler);
 
   const world = new World();
 

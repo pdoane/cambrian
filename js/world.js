@@ -83,13 +83,28 @@ export class World {
     }
   }
 
+  /** Check if position overlaps any water pool */
+  _overlapsWater(x, y, size) {
+    for (const pool of this.waterPools) {
+      const dx = x - pool.x;
+      const dy = y - pool.y;
+      const minDist = pool.radius + size;
+      if (dx * dx + dy * dy < minDist * minDist) return true;
+    }
+    return false;
+  }
+
   /** Spawn creatures from a species design */
   _spawnSpecies(release, margin) {
     const count = release.count || 10;
     const cfg = release.cfg;
     for (let i = 0; i < count; i++) {
-      const x = margin + Math.random() * (this.width - margin * 2);
-      const y = margin + Math.random() * (this.height - margin * 2);
+      let x, y, attempts = 0;
+      do {
+        x = margin + Math.random() * (this.width - margin * 2);
+        y = margin + Math.random() * (this.height - margin * 2);
+        attempts++;
+      } while (this._overlapsWater(x, y, 10) && attempts < 30);
       const gender = i < count / 2 ? "male" : "female";
       const genome = new Genome({ ...release.genes });
       const c = new Creature(x, y, genome, gender, cfg);
@@ -213,6 +228,7 @@ export class World {
 
   /**
    * Find the nearest predator threatening this creature within range.
+   * Also detects stronger predators that would hunt this creature.
    */
   findNearestThreat(creature, range) {
     let best = null;
@@ -222,6 +238,9 @@ export class World {
       if (other === creature) continue;
       if (!other.alive) continue;
       if (!other.wouldHunt(creature)) continue;
+      // Only flee from hunters that are actively hunting or could hunt us
+      // A predator only considers threats with notably higher attack
+      if (creature.isPredator && other.attack < creature.attack * 1.3) continue;
 
       const d2 = distSq(creature.x, creature.y, other.x, other.y);
       if (d2 < bestDist) {

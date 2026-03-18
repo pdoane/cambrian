@@ -152,7 +152,7 @@ export class Creature {
   }
 
   get canFlee() {
-    if (this.state === "eating" || this.state === "drinking" || this.state === "mating") return false;
+    if (this.state === "eating" || this.state === "drinking" || this.state === "mating" || this.state === "killing") return false;
     return true;
   }
 

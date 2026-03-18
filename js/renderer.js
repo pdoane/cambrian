@@ -39,10 +39,15 @@ export class Renderer {
     ctx.fillStyle = "#1a1a2e";
     ctx.fillRect(0, 0, w, h);
 
-    const ox = Math.floor((w - world.width) / 2);
-    const oy = Math.floor((h - world.height) / 2);
+    // Scale world to fit canvas, preserving aspect ratio
+    const scaleX = w / world.width;
+    const scaleY = h / world.height;
+    const scale = Math.min(scaleX, scaleY);
+    const ox = Math.floor((w - world.width * scale) / 2);
+    const oy = Math.floor((h - world.height * scale) / 2);
     ctx.save();
     ctx.translate(ox, oy);
+    ctx.scale(scale, scale);
 
     ctx.strokeStyle = "rgba(126, 207, 255, 0.3)";
     ctx.lineWidth = 2;
@@ -64,22 +69,17 @@ export class Renderer {
   }
 
   _drawWaterPools(ctx, world) {
-    const time = world.tickCount * 0.02;
-
     for (const pool of world.waterPools) {
-      const pulse = 0.85 + 0.15 * Math.sin(time + pool.x * 0.01);
-
-      const grad = ctx.createRadialGradient(
-        pool.x, pool.y, 0,
-        pool.x, pool.y, pool.radius
-      );
-      grad.addColorStop(0, `hsla(200, 80%, 45%, ${pulse})`);
-      grad.addColorStop(1, `hsla(210, 60%, 25%, ${pulse * 0.7})`);
-
-      ctx.fillStyle = grad;
+      ctx.fillStyle = "hsl(210, 60%, 35%)";
       ctx.beginPath();
       ctx.arc(pool.x, pool.y, pool.radius, 0, Math.PI * 2);
       ctx.fill();
+
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(pool.x, pool.y, pool.radius, 0, Math.PI * 2);
+      ctx.stroke();
     }
   }
 
@@ -102,7 +102,12 @@ export class Renderer {
         ctx.stroke();
       }
 
-      // Individual berries removed — the purple arc conveys remaining supply
+      // Black outline (outermost)
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(bush.x, bush.y, bush.radius + 4, 0, Math.PI * 2);
+      ctx.stroke();
     }
   }
 
@@ -142,11 +147,16 @@ export class Renderer {
     const drawn = new Set();
     for (const c of world.creatures) {
       if (c.state !== "mating" || !c.matePartner) continue;
-      const pairKey = Math.min(c.id, c.matePartner.id) + ":" + Math.max(c.id, c.matePartner.id);
+      const p = c.matePartner;
+      if (!p.alive || p.state !== "mating") continue;
+      const pairKey = Math.min(c.id, p.id) + ":" + Math.max(c.id, p.id);
       if (drawn.has(pairKey)) continue;
       drawn.add(pairKey);
 
-      const p = c.matePartner;
+      // Skip if partners are unreasonably far apart (stale reference)
+      const dx = c.x - p.x;
+      const dy = c.y - p.y;
+      if (dx * dx + dy * dy > 10000) continue; // ~100px max
 
       ctx.strokeStyle = "rgba(255, 100, 180, 0.5)";
       ctx.lineWidth = 1;
@@ -423,6 +433,11 @@ export class Renderer {
     ctx.beginPath();
     ctx.arc(iconX, y, 6, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(iconX, y, 6, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.fillStyle = labelColor;
     ctx.fillText("Bush", textX, y);
     y += 16;
@@ -437,13 +452,15 @@ export class Renderer {
     y += 16;
 
     // Water
-    const grad = ctx.createRadialGradient(iconX, y, 0, iconX, y, 6);
-    grad.addColorStop(0, "hsl(200, 80%, 45%)");
-    grad.addColorStop(1, "hsl(210, 60%, 25%)");
-    ctx.fillStyle = grad;
+    ctx.fillStyle = "hsl(210, 60%, 35%)";
     ctx.beginPath();
     ctx.arc(iconX, y, 6, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(iconX, y, 6, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.fillStyle = labelColor;
     ctx.fillText("Water", textX, y);
     y += 16;

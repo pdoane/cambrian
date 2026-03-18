@@ -44,6 +44,13 @@ export class Simulation {
       }
 
       if (c.state === "mating") {
+        // Break mating if partner is dead or no longer mating
+        if (c.matePartner && (!c.matePartner.alive || c.matePartner.state !== "mating")) {
+          c.state = "idle";
+          c.matePartner = null;
+          c.metabolize(false);
+          continue;
+        }
         if (c.tickMating()) {
           if (c.gender === "female") {
             c.becomePregnant(c.matePartner ? c.matePartner.genome : c.genome);
@@ -153,17 +160,44 @@ export class Simulation {
     world.tickCount++;
   }
 
+  /** Push creature out of any water pool it overlaps (unless drinking) */
+  _enforceWaterCollision(c, world) {
+    if (c.state === "drinking" || c.state === "seekingWater") return;
+    for (const pool of world.waterPools) {
+      const dx = c.x - pool.x;
+      const dy = c.y - pool.y;
+      const d2 = dx * dx + dy * dy;
+      const minDist = pool.radius + c.size;
+      if (d2 < minDist * minDist) {
+        const d = Math.sqrt(d2);
+        if (d < 0.01) {
+          // Exactly on center — push in random direction
+          c.x = pool.x + minDist;
+        } else {
+          const nx = dx / d;
+          const ny = dy / d;
+          c.x = pool.x + nx * minDist;
+          c.y = pool.y + ny * minDist;
+        }
+        // Deflect heading away from pool
+        c.heading = Math.atan2(c.y - pool.y, c.x - pool.x);
+      }
+    }
+  }
+
   /** Decide behavior and move based on priorities */
   _decideBehaviorAndMove(c, world) {
     const range = c.effectiveEyesight;
 
     // Priority 0: Flee from predators (if able)
-    if (!c.isPredator && c.canFlee) {
+    // Predators only flee from stronger predators; non-predators flee from any predator
+    if (c.canFlee) {
       const threat = world.findNearestThreat(c, range);
       if (threat) {
         c.state = "fleeing";
         c.steerAwayFrom(threat.x, threat.y);
         c.move(world.width, world.height);
+        this._enforceWaterCollision(c, world);
         return;
       }
     }
@@ -178,6 +212,7 @@ export class Simulation {
           c.state = "seekingFood";
           c.steerToward(corpse.x, corpse.y);
           c.move(world.width, world.height);
+          this._enforceWaterCollision(c, world);
           if (distSq(c.x, c.y, corpse.x, corpse.y) < c.size * c.size) {
             const eaten = corpse.consume(WORLD.berryEnergy * c.efficiency);
             c.energy = Math.min(c.energy + eaten, c.maxEnergy);
@@ -194,6 +229,7 @@ export class Simulation {
           c.state = "seekingFood";
           c.steerToward(result.berry.slotX, result.berry.slotY);
           c.move(world.width, world.height);
+          this._enforceWaterCollision(c, world);
 
           // Check if close enough to start eating
           if (distSq(c.x, c.y, result.berry.slotX, result.berry.slotY) < c.size * c.size) {
@@ -227,6 +263,7 @@ export class Simulation {
         c.state = "hunting";
         c.steerToward(prey.x, prey.y);
         c.move(world.width, world.height);
+        this._enforceWaterCollision(c, world);
 
         // Check if close enough to attack
         const attackDist = (c.size + prey.size) * 1.2;
@@ -246,6 +283,7 @@ export class Simulation {
         c.state = "seekingMate";
         c.steerToward(mate.x, mate.y);
         c.move(world.width, world.height);
+        this._enforceWaterCollision(c, world);
 
         const matingDist = (c.size + mate.size) * 1.5;
         if (distSq(c.x, c.y, mate.x, mate.y) < matingDist * matingDist) {
@@ -267,5 +305,6 @@ export class Simulation {
     }
     c.wander();
     c.move(world.width, world.height);
+    this._enforceWaterCollision(c, world);
   }
 }
