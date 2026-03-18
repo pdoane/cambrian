@@ -29,6 +29,7 @@ import {
 } from "./species.js";
 
 let uiBuilt = false;
+let currentSimulation = null;
 
 const SESSION_KEY = "cambrian_session";
 
@@ -84,12 +85,14 @@ export class UI {
   }
 
   setupControls() {
+    currentSimulation = this.simulation;
+
     replaceWithClone("btn-play-pause");
 
     const btnPlayPause = document.getElementById("btn-play-pause");
     btnPlayPause.addEventListener("click", () => {
-      this.simulation.running = !this.simulation.running;
-      btnPlayPause.textContent = this.simulation.running ? "Pause" : "Play";
+      currentSimulation.running = !currentSimulation.running;
+      btnPlayPause.textContent = currentSimulation.running ? "Pause" : "Play";
     });
 
     // Speed slider — only set up once, preserve across restarts
@@ -102,7 +105,7 @@ export class UI {
       speedSlider.dataset.bound = "1";
       speedSlider.addEventListener("input", () => {
         const level = parseInt(speedSlider.value);
-        this.simulation.speed = SPEED_MAP[level];
+        currentSimulation.speed = SPEED_MAP[level];
         speedLabel.textContent = `Speed: ${SPEED_MAP[level]}x`;
       });
     }
@@ -480,9 +483,18 @@ function openSpeciesEditorModal(design) {
       input.type = "number";
       input.className = "modal-text-input";
       input.min = 1;
-      input.max = 200;
+      input.max = 500;
       input.value = design.count;
-      input.addEventListener("input", () => { design.count = parseInt(input.value) || 1; });
+      const clamp = () => {
+        let val = parseInt(input.value) || 1;
+        val = Math.max(1, Math.min(500, val));
+        design.count = val;
+        input.value = val;
+      };
+      input.addEventListener("input", () => {
+        design.count = Math.max(1, parseInt(input.value) || 1);
+      });
+      input.addEventListener("change", clamp);
       return input;
     });
 

@@ -29,23 +29,56 @@ export class World {
   initialize(speciesReleases = null) {
     const margin = 30;
 
-    // Spawn bushes
-    for (let i = 0; i < WORLD.bushCount; i++) {
+    // Track placed objects to avoid overlaps
+    const placed = []; // { x, y, radius }
+
+    const tryPlace = (radius, maxAttempts = 50) => {
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const x = margin + Math.random() * (this.width - margin * 2);
+        const y = margin + Math.random() * (this.height - margin * 2);
+        let overlaps = false;
+        for (const p of placed) {
+          const dx = x - p.x;
+          const dy = y - p.y;
+          const minDist = radius + p.radius + 10;
+          if (dx * dx + dy * dy < minDist * minDist) {
+            overlaps = true;
+            break;
+          }
+        }
+        if (!overlaps) {
+          placed.push({ x, y, radius });
+          return { x, y };
+        }
+      }
+      // Fallback: place randomly if no non-overlapping spot found
       const x = margin + Math.random() * (this.width - margin * 2);
       const y = margin + Math.random() * (this.height - margin * 2);
-      this.bushes.push(new Bush(x, y));
+      placed.push({ x, y, radius });
+      return { x, y };
+    };
+
+    // Spawn bushes
+    for (let i = 0; i < WORLD.bushCount; i++) {
+      const pos = tryPlace(22); // bush radius 18 + berry ring
+      this.bushes.push(new Bush(pos.x, pos.y));
     }
 
     // Spawn water pools
     for (let i = 0; i < WORLD.waterPoolCount; i++) {
-      const x = margin + Math.random() * (this.width - margin * 2);
-      const y = margin + Math.random() * (this.height - margin * 2);
-      this.waterPools.push(new WaterPool(x, y, WORLD.waterPoolRadius));
+      const pos = tryPlace(WORLD.waterPoolRadius);
+      this.waterPools.push(new WaterPool(pos.x, pos.y, WORLD.waterPoolRadius));
     }
 
     if (speciesReleases) {
+      // Cap total spawned creatures to maxCreatures
+      let remaining = WORLD.maxCreatures;
       for (const release of speciesReleases) {
-        this._spawnSpecies(release, margin);
+        const count = Math.min(release.count, remaining);
+        if (count > 0) {
+          this._spawnSpecies({ ...release, count }, margin);
+          remaining -= count;
+        }
       }
     }
   }

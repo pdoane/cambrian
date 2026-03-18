@@ -160,12 +160,23 @@ export class Renderer {
       const female = c.gender === "female" ? c : p;
       if (female.matingTimer > 0) {
         const progress = 1 - female.matingTimer / female.cfg.matingDuration;
-        ctx.strokeStyle = "rgba(255, 100, 180, 0.7)";
+        const arcRadius = female.renderSize + 4;
+        const startAngle = -Math.PI / 2;
+        const endAngle = startAngle + progress * Math.PI * 2;
+
+        // Draw rainbow arc using small segments
+        const segments = Math.max(6, Math.ceil(progress * 36));
+        const angleSpan = endAngle - startAngle;
         ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(female.x, female.y, female.renderSize + 4,
-          -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
-        ctx.stroke();
+        for (let s = 0; s < segments; s++) {
+          const a0 = startAngle + (s / segments) * angleSpan;
+          const a1 = startAngle + ((s + 1) / segments) * angleSpan;
+          const hue = (s / segments) * 360;
+          ctx.strokeStyle = `hsl(${hue}, 100%, 55%)`;
+          ctx.beginPath();
+          ctx.arc(female.x, female.y, arcRadius, a0, a1);
+          ctx.stroke();
+        }
       }
     }
   }

@@ -8,9 +8,7 @@ function ensureOverlay() {
   if (overlay) return overlay;
   overlay = document.createElement("div");
   overlay.className = "modal-overlay";
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) closeModal();
-  });
+  // Clicking outside the dialog does not dismiss — user must use buttons or Escape.
   document.body.appendChild(overlay);
   return overlay;
 }
@@ -54,11 +52,24 @@ export function openModal(title, buildFn) {
   ov.appendChild(dialog);
   ov.classList.add("visible");
 
+  // Allow Escape key to close the modal
+  const onKeyDown = (e) => {
+    if (e.key === "Escape") {
+      closeModal();
+    }
+  };
+  document.addEventListener("keydown", onKeyDown);
+  ov._onKeyDown = onKeyDown;
+
   return { close: closeModal };
 }
 
 export function closeModal() {
   if (overlay) {
+    if (overlay._onKeyDown) {
+      document.removeEventListener("keydown", overlay._onKeyDown);
+      overlay._onKeyDown = null;
+    }
     overlay.classList.remove("visible");
   }
 }
