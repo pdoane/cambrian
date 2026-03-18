@@ -12,8 +12,8 @@ export const GENE_DEFS = [
   { name: "charisma",             min: 0.01,max: 1.0, default: 0.5, mutRate: 0.2, mutStep: 0.05, unit: "%" },
   { name: "reproductiveCapability",min: 1,  max: 8,   default: 2,   mutRate: 0.2, mutStep: 0.5, unit: "babies" },
   { name: "pregnancyTime",        min: 50,  max: 500, default: 200, mutRate: 0.2, mutStep: 20,  unit: "ticks" },
-  { name: "attack",               min: 0,   max: 5.0, default: 0,   mutRate: 0.1, mutStep: 0.3, unit: "dmg/tick" },
-  { name: "defense",              min: 0,   max: 3.0, default: 0,   mutRate: 0.1, mutStep: 0.2, unit: "" },
+  { name: "attack",               min: 0,   max: 5.0, default: 1.0, mutRate: 0.1, mutStep: 0.3, unit: "dmg/tick" },
+  { name: "defense",              min: 0,   max: 3.0, default: 0.5, mutRate: 0.1, mutStep: 0.2, unit: "" },
 ];
 
 export const WORLD = {

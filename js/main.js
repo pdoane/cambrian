@@ -21,10 +21,13 @@ function start() {
 
   const world = new World();
 
-  // Use species releases if any are configured
+  // Only initialize the world if there are species to launch
   const config = getLaunchConfig();
   const releases = config.releases;
-  world.initialize(releases.length > 0 ? releases : null);
+  const launched = releases.length > 0;
+  if (launched) {
+    world.initialize(releases);
+  }
 
   const simulation = new Simulation(world);
   const renderer = new Renderer(canvas, world);
@@ -33,8 +36,8 @@ function start() {
 
   const ui = new UI(simulation, () => start());
 
-  simulation.running = true;
-  document.getElementById("btn-play-pause").textContent = "Pause";
+  simulation.running = launched;
+  document.getElementById("btn-play-pause").textContent = launched ? "Pause" : "Play";
 
   let frameCount = 0;
 

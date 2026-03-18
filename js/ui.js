@@ -30,11 +30,37 @@ import {
 
 let uiBuilt = false;
 
+const SESSION_KEY = "cambrian_session";
+
 /** Currently selected ecosystem (null = default) */
 let selectedEcosystem = null;
 
 /** Species releases queued for next launch */
 let pendingReleases = [];
+
+function saveSession() {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      ecosystemId: selectedEcosystem?.id || null,
+      releases: pendingReleases,
+    }));
+  } catch (e) { /* ignore */ }
+}
+
+function restoreSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data.ecosystemId) {
+      selectedEcosystem = loadEcosystems().find(e => e.id === data.ecosystemId) || null;
+      if (selectedEcosystem) applyEcosystemToWorld(selectedEcosystem);
+    }
+    if (data.releases && data.releases.length > 0) {
+      pendingReleases = data.releases;
+    }
+  } catch (e) { /* ignore */ }
+}
 
 /** Get launch config for main.js */
 export function getLaunchConfig() {
@@ -50,6 +76,7 @@ export class UI {
     this.onRestart = onRestart;
     this.setupControls();
     if (!uiBuilt) {
+      restoreSession();
       buildSidebar(onRestart);
       setupChartTooltips();
       uiBuilt = true;
@@ -210,9 +237,11 @@ function populateEcosystemSelect() {
     selectedEcosystem = id ? loadEcosystems().find(e => e.id === id) || null : null;
     if (selectedEcosystem) applyEcosystemToWorld(selectedEcosystem);
     document.getElementById("btn-edit-eco")?.classList.toggle("disabled", !selectedEcosystem);
+    saveSession();
   };
 
   document.getElementById("btn-edit-eco")?.classList.toggle("disabled", !selectedEcosystem);
+  saveSession();
 }
 
 function applyEcosystemToWorld(eco) {
@@ -280,6 +309,7 @@ function renderReleaseList() {
     empty.className = "sidebar-empty";
     empty.textContent = "No species. No creatures will spawn.";
     list.appendChild(empty);
+    saveSession();
     return;
   }
 
@@ -328,6 +358,8 @@ function renderReleaseList() {
     row.appendChild(btns);
     list.appendChild(row);
   }
+
+  saveSession();
 }
 
 function drawShapeIcon(canvas, sides, hue) {

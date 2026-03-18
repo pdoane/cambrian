@@ -30,9 +30,6 @@ export class Charts {
     ctx.fillRect(0, 0, w, h);
 
     if (data.length < 2) {
-      ctx.fillStyle = "rgba(255,255,255,0.3)";
-      ctx.font = "11px monospace";
-      ctx.fillText("Waiting...", 4, h / 2);
       return;
     }
 
