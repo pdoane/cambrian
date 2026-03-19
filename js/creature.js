@@ -1,6 +1,6 @@
 // creature.js -- A living creature in the simulation.
 // Each creature carries its own cfg (energy/injury config) from its species design.
-// States: idle, seekingFood, seekingWater, seekingMate, mating, pregnant, drinking, eating, growing, fleeing, hunting, killing
+// States: idle, seekingFood, seekingWater, seekingMate, mating, pregnant, drinking, eating, fleeing, hunting, killing
 
 import { Genome } from "./genome.js";
 import { WORLD } from "./config.js";
@@ -143,7 +143,7 @@ export class Creature {
 
   get canMate() {
     if (this.state === "mating" || this.state === "pregnant" || this.state === "drinking"
-        || this.state === "growing" || this.state === "eating" || this.state === "killing"
+        || this.state === "eating" || this.state === "killing"
         || this.state === "fleeing") return false;
     if (!this.hasEatenSinceMate || !this.hasDrunkSinceMate) return false;
     if (this.energy < this.maxEnergy * 0.3) return false;
@@ -217,7 +217,7 @@ export class Creature {
 
     this.age++;
 
-    if (this.growthProgress >= 1.0 && this.state !== "growing") {
+    if (this.growthProgress >= 1.0) {
       this.maturityTimer++;
     }
 
@@ -317,7 +317,7 @@ export class Creature {
         Math.random() < 0.5 ? "male" : "female",
         this.cfg
       );
-      baby.state = "growing";
+      baby.state = "idle";
       baby.growthProgress = 0;
       baby.growthDuration = Math.min(
         this.cfg.growthDuration * gestationBonus,

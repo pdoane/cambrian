@@ -93,13 +93,8 @@ export class Simulation {
         continue;
       }
 
-      if (c.state === "growing") {
-        if (c.tickGrowth()) {
-          c.state = "idle";
-        }
-        this._decideBehaviorAndMove(c, world);
-        c.metabolize(c.state !== "idle" && c.state !== "growing");
-        continue;
+      if (c.growthProgress < 1.0) {
+        c.tickGrowth();
       }
 
       // Normal behavior
@@ -277,7 +272,7 @@ export class Simulation {
     }
 
     // Priority 4: Seek mate when able
-    if (c.canMate && c.state !== "pregnant" && c.state !== "growing") {
+    if (c.canMate && c.state !== "pregnant") {
       const mate = world.findNearestMate(c, range);
       if (mate) {
         c.state = "seekingMate";
@@ -300,7 +295,7 @@ export class Simulation {
     }
 
     // Idle
-    if (c.state !== "pregnant" && c.state !== "growing" && c.state !== "killing") {
+    if (c.state !== "pregnant" && c.state !== "killing") {
       c.state = "idle";
     }
     c.wander();
