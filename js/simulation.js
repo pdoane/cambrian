@@ -34,6 +34,10 @@ export class Simulation {
       // Handle drinking state
       if (c.state === "drinking") {
         c.tickDrinking();
+        // After drinking ends, push creature to the edge of the pool
+        if (c.state !== "drinking") {
+          this._enforceWaterCollision(c, world);
+        }
         c.metabolize(false);
         continue;
       }
@@ -146,7 +150,11 @@ export class Simulation {
     // 5. Add newborns (respecting population cap)
     const room = WORLD.maxCreatures - world.creatures.length;
     if (room > 0) {
-      world.creatures.push(...newCreatures.slice(0, room));
+      const toAdd = newCreatures.slice(0, room);
+      for (const baby of toAdd) {
+        this._enforceWaterCollision(baby, world);
+      }
+      world.creatures.push(...toAdd);
     }
 
     // 6. Clean up depleted corpses
@@ -155,7 +163,7 @@ export class Simulation {
     world.tickCount++;
   }
 
-  /** Push creature out of any water pool it overlaps (unless drinking) */
+  /** Push creature out of any water pool it overlaps (unless drinking/seeking water) */
   _enforceWaterCollision(c, world) {
     if (c.state === "drinking" || c.state === "seekingWater") return;
     for (const pool of world.waterPools) {
@@ -167,7 +175,9 @@ export class Simulation {
         const d = Math.sqrt(d2);
         if (d < 0.01) {
           // Exactly on center — push in random direction
-          c.x = pool.x + minDist;
+          const angle = Math.random() * Math.PI * 2;
+          c.x = pool.x + Math.cos(angle) * minDist;
+          c.y = pool.y + Math.sin(angle) * minDist;
         } else {
           const nx = dx / d;
           const ny = dy / d;
@@ -191,6 +201,22 @@ export class Simulation {
       if (threat) {
         c.state = "fleeing";
         c.steerAwayFrom(threat.x, threat.y);
+
+        // If flee direction would go through a water pool, steer around it
+        const fleeAngle = c.heading;
+        const nextX = c.x + Math.cos(fleeAngle) * c.effectiveSpeed;
+        const nextY = c.y + Math.sin(fleeAngle) * c.effectiveSpeed;
+        for (const pool of world.waterPools) {
+          const minDist = pool.radius + c.size;
+          if (distSq(nextX, nextY, pool.x, pool.y) < minDist * minDist) {
+            // Deflect perpendicular to pool — choose side away from threat
+            const toPool = Math.atan2(pool.y - c.y, pool.x - c.x);
+            const cross = Math.sin(fleeAngle - toPool);
+            c.heading = toPool + (cross >= 0 ? Math.PI / 2 : -Math.PI / 2);
+            break;
+          }
+        }
+
         c.move(world.width, world.height);
         this._enforceWaterCollision(c, world);
         return;
