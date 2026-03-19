@@ -216,8 +216,10 @@ export class World {
       if (!other.alive) continue;
       if (!predator.wouldHunt(other)) continue;
 
+      // Charismatic prey is easier to spot (higher visibility = detectable from farther)
+      const effectiveRange = range * other.visibility;
       const d2 = distSq(predator.x, predator.y, other.x, other.y);
-      if (d2 < bestDist) {
+      if (d2 < effectiveRange * effectiveRange && d2 < bestDist) {
         bestDist = d2;
         best = other;
       }

@@ -76,16 +76,15 @@ export class Creature {
     this.pregnancyTime = this.genome.get("pregnancyTime");
     this.attack     = this.genome.get("attack");
     this.defense    = this.genome.get("defense");
-    // Metabolism genes (formerly in cfg)
+    // Metabolism genes
     this.maxEnergy       = this.genome.get("maxEnergy");
-    this.maxHealth       = this.genome.get("maxHealth");
-    this.moveCostBase    = this.genome.get("moveCostBase");
-    this.idleCost        = this.genome.get("idleCost");
     this.hungerThreshold = this.genome.get("hungerThreshold");
     this.thirstThreshold = this.genome.get("thirstThreshold");
     this.matingDuration  = this.genome.get("matingDuration");
     this.eatingDuration  = this.genome.get("eatingDuration");
     this.maturityAge     = this.genome.get("maturityAge");
+    // Derived stats — not genes, computed from body traits
+    this.maxHealth       = this.size * this.cfg.healthPerSize;
   }
 
   get isPredator() {
@@ -111,6 +110,11 @@ export class Creature {
       case "mild":    return this.cfg.mildMult;
       default:        return 1.0;
     }
+  }
+
+  /** How visible this creature is to predators — charismatic creatures stand out. */
+  get visibility() {
+    return 0.5 + this.charisma * 0.5;
   }
 
   get effectiveSpeed() {
@@ -191,9 +195,12 @@ export class Creature {
   }
 
   metabolize(isMoving) {
-    let energyCost = this.idleCost;
+    // Idle cost scales with body traits: bigger eyes, thicker armor, better
+    // digestion, and larger bodies all cost more energy to maintain.
+    const traitCost = 1 + this.eyesight / 200 + this.defense / 3 + this.efficiency / 3;
+    let energyCost = this.cfg.idleCostBase * traitCost * (this.size / 10);
     if (isMoving) {
-      energyCost += this.moveCostBase * this.effectiveSpeed * this.effectiveSpeed * (this.size / 10);
+      energyCost += this.cfg.moveCostBase * this.effectiveSpeed * this.effectiveSpeed * (this.size / 10);
     }
     if (this.state === "pregnant") {
       energyCost *= this.cfg.pregnancyEnergyCostMult;

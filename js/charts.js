@@ -53,7 +53,9 @@ export class Charts {
     // Label and current value
     ctx.fillStyle = "rgba(255,255,255,0.7)";
     ctx.font = "10px monospace";
-    ctx.fillText(`${label}: ${data[data.length - 1].toFixed(1)}`, 4, 11);
+    const val = data[data.length - 1];
+    const decimals = Math.abs(val) < 0.1 ? 3 : 1;
+    ctx.fillText(`${label}: ${val.toFixed(decimals)}`, 4, 11);
   }
 
   /** Redraw all chart canvases. */

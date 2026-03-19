@@ -13,9 +13,6 @@ export const GENE_DEFS = [
   // ── Metabolism ──
   { name: "efficiency",           min: 0.1, max: 1.0, default: 0.5, unit: "",        category: "metabolism" },
   { name: "maxEnergy",            min: 100, max: 1000,default: 200, unit: "",        category: "metabolism" },
-  { name: "maxHealth",            min: 50,  max: 500, default: 100, unit: "",        category: "metabolism" },
-  { name: "moveCostBase",         min: 0.01,max: 0.5, default: 0.05,unit: "",        category: "metabolism" },
-  { name: "idleCost",             min: 0.005,max: 0.2,default: 0.02,unit: "",        category: "metabolism" },
   { name: "hungerThreshold",      min: 0.1, max: 1.0, default: 0.6, unit: "",        category: "metabolism" },
   { name: "thirstThreshold",      min: 0.1, max: 1.0, default: 0.6, unit: "",        category: "metabolism" },
   { name: "eatingDuration",       min: 10,  max: 120, default: 40,  unit: "ticks",   category: "metabolism" },
@@ -50,8 +47,6 @@ export const WORLD = {
 };
 
 // Fixed species-level constants (not heritable genes).
-// Values that moved to GENE_DEFS: maxEnergy, maxHealth, moveCostBase, idleCost,
-// hungerThreshold, thirstThreshold, matingDuration, eatingDuration, maturityAge.
 export const ENERGY = {
   initial: 100,
   healthDrainNoFood: 0.15,   // health lost per tick when energy <= 0
@@ -69,6 +64,10 @@ export const ENERGY = {
   predatorKillDamage: 0.5,   // health damage per tick while predator attacks
   escapeChance: 0.0017,      // ~10% per second at 60fps (1 - (1-x)^60 ≈ 0.1)
   corpseEnergy: 80,          // total energy in a corpse
+  // Derived metabolism constants (no longer genes)
+  idleCostBase: 0.005,       // base idle energy drain per tick
+  moveCostBase: 0.05,        // base movement energy cost multiplier
+  healthPerSize: 12,         // maxHealth = size * healthPerSize
 };
 
 export const INJURY = {

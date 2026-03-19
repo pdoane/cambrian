@@ -7,14 +7,14 @@ const CHART_TIPS = {
   "chart-population": "Total living creatures over time. A stable line means births match deaths. Booms happen when food is plentiful; crashes when overpopulation exhausts food. A healthy ecosystem oscillates gently.",
   "chart-speed": "Average movement speed over time. Speed helps find food but costs energy (speed² × size). If food is scarce, slower creatures may survive longer. If food is abundant, fast ones dominate.",
   "chart-size": "Average body size over time. Bigger creatures eat from farther away but burn more energy moving. Watch whether evolution favors large or small — it depends on food density.",
-  "chart-eyesight": "Average eyesight over time. Longer range = better detection of food, water, and mates. This tends to increase unless mutation pushes it back down.",
-  "chart-efficiency": "Average efficiency over time. Since higher efficiency is always better (more energy per meal, no downside), expect this to climb steadily toward the maximum.",
+  "chart-eyesight": "Average eyesight over time. Longer range = better detection of food, water, and mates, but increases idle metabolism cost.",
+  "chart-efficiency": "Average efficiency over time. More energy per meal, but increases idle metabolism cost. Watch for the trade-off between food extraction and upkeep.",
   "chart-hue": "Average hue over time. Hue determines species — creatures only mate within the species hue threshold. Watch for clusters splitting into separate species via drift.",
-  "chart-charisma": "Average charisma over time. Higher charisma improves mating success probability. Both partners' charisma values are multiplied for the mating check.",
+  "chart-charisma": "Average charisma over time. Higher charisma improves mating success but makes the creature more visible to predators (peacock-tail trade-off).",
   "chart-reproductiveCapability": "Average reproductive capability. More babies per mating can grow population faster but also drains the mother's resources and increases competition.",
   "chart-pregnancyTime": "Average pregnancy duration. Longer pregnancies produce stronger babies (gestation bonus) but cost the mother more energy and reduce her mobility.",
   "chart-attack": "Average attack power. Creatures with attack > 0 become predators that hunt weaker creatures. Higher attack deals more damage per tick.",
-  "chart-defense": "Average defense. Reduces damage taken from predator attacks. Each point of defense subtracts from incoming attack power.",
+  "chart-defense": "Average defense. Reduces damage taken from predator attacks but increases idle metabolism cost.",
 };
 
 // Auto-generate tips for any gene not explicitly listed
