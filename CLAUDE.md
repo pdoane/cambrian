@@ -9,11 +9,11 @@ Cambrian is a browser-based evolution simulation with predator-prey dynamics. Cr
 ## Running Locally
 
 ```bash
-./serve.sh          # starts python3 -m http.server 8000
-# then open http://localhost:8000
+npm install         # first time only
+npm run dev         # starts Vite dev server with HMR
+npm run build       # production build to dist/
+npm run preview     # preview production build locally
 ```
-
-No build step, no dependencies, no package manager. Pure vanilla JS with ES modules loaded directly by the browser.
 
 ## Architecture
 
@@ -40,4 +40,4 @@ No build step, no dependencies, no package manager. Pure vanilla JS with ES modu
 
 ## Deployment
 
-Hosted on GitHub Pages. `sw.js` is a service worker for cache busting — it intercepts fetches and appends a version query param to bust browser caches on deploy.
+Hosted on GitHub Pages via GitHub Actions (`.github/workflows/deploy.yml`). On push to `main`, the workflow runs `npm ci && npm run build` and deploys the `dist/` folder. Vite produces content-hashed filenames for cache busting.

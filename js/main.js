@@ -1,5 +1,6 @@
 // main.js -- The entry point. Wires everything together and runs the game loop.
 
+import "../css/style.css";
 import { World } from "./world.js";
 import { Simulation } from "./simulation.js";
 import { Renderer } from "./renderer.js";
